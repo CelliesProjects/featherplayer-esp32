@@ -1,7 +1,7 @@
 #ifndef SECRETS
 #define SECRETS
 
-const char *SSID= "huiskamer";
-const char *PSK = "0987654321";
+const char *SSID= "xxx";
+const char *PSK = "xxx";
 
 #endif
