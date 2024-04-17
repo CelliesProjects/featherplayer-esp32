@@ -1,18 +1,5 @@
 
 #include "playertask.h"
-#include "playList.h"
-
-#define VS1053_CS 6
-#define VS1053_DCS 10
-#define VS1053_DREQ 9
-#define SDREADER_CS 5
-
-extern playList_t playList;
-extern uint8_t _playerVolume;
-extern SemaphoreHandle_t spiMutex;
-extern QueueHandle_t playerQueue;
-extern bool _paused;
-extern size_t _savedPosition;
 
 void updateTFT()
 {

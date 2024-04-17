@@ -5,9 +5,18 @@
 #include <ESP32_VS1053_Stream.h>
 
 #include "tfttask.h"
+#include "playList.h"
 
-extern uint8_t _playerVolume;
+#define VS1053_CS 6
+#define VS1053_DCS 10
+#define VS1053_DREQ 9
+#define SDREADER_CS 5
+
+extern playList_t playList;
+extern SemaphoreHandle_t spiMutex;
+extern QueueHandle_t playerQueue;
 extern size_t _savedPosition;
+extern uint8_t _playerVolume;
 extern bool _paused;
 
 struct playerMessage
@@ -20,12 +29,6 @@ struct playerMessage
         PAUSE,
         RESUME,
         SETTONE,
-        /*WS_UPDATE_STATION,
-        WS_UPDATE_STREAMTITLE,
-        WS_UPDATE_NOWPLAYING,
-        WS_UPDATE_FAVORITES,
-        WS_UPDATE_PLAYLIST,
-        WS_PASS_MESSAGE*/
     };
     action action;
     char str[256];
