@@ -3,6 +3,8 @@
 // #include <FS.h>
 // #include <SD.h>
 
+#include "icons.h"
+#include "percentEncode.h"
 #include "tfttask.h"
 #include "playertask.h"
 #include "servertask.h"
@@ -70,7 +72,7 @@ void setup()
     BaseType_t taskResult = xTaskCreatePinnedToCore(
         tftTask,
         "tftTask",
-        4000,
+        2700,
         NULL,
         (tskIDLE_PRIORITY + 2) | portPRIVILEGE_BIT,
         NULL,
@@ -151,6 +153,24 @@ void setup()
         while (1)
             delay(100);
     }
+
+    taskResult = xTaskCreatePinnedToCore(
+        serverTask,
+        "serverTask",
+        4000,
+        NULL,
+        tskIDLE_PRIORITY + 1,
+        NULL,
+        PRO_CPU_NUM);
+
+    if (taskResult != pdPASS)
+    {
+        log_e("FATAL error! Could not create serverTask. System HALTED!");
+        while (1)
+            delay(100);
+    }
+
+    vTaskDelete(NULL);
 }
 
 void loop()
