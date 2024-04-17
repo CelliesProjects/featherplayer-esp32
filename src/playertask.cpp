@@ -44,6 +44,8 @@ void playerTask(void *parameter)
 
     log_i("Ready to rock!");
 
+    audio.connecttohost("http://icecast.omroep.nl/radio6-bb-mp3");
+
     while (1)
     {
         static playerMessage msg{};

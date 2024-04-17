@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #include <WiFi.h>
-//#include <FS.h>
-//#include <SD.h>
+// #include <FS.h>
+// #include <SD.h>
 
 #include "tfttask.h"
 #include "playertask.h"
@@ -9,12 +9,11 @@
 
 #include "WiFiCredentials.h"
 
-playList_t playList;
-
 const char PROGRAM_NAME[] = {"featherplayer-esp32"};
-static uint8_t _playerVolume = VS1053_INITIALVOLUME;
-static size_t _savedPosition = 0;
-static bool _paused = false;
+playList_t playList;
+uint8_t _playerVolume = VS1053_INITIALVOLUME;
+size_t _savedPosition = 0;
+bool _paused = false;
 
 SemaphoreHandle_t spiMutex = nullptr; // SPI bus is shared between playertask -VS1053- and tfttask -ST7889-
 
@@ -56,6 +55,14 @@ void setup()
     if (!playerQueue)
     {
         log_e("FATAL error! could not create player queue. System HALTED!");
+        while (1)
+            delay(100);
+    }
+
+    serverQueue = xQueueCreate(5, sizeof(struct serverMessage));
+    if (!serverQueue)
+    {
+        log_e("FATAL error! could not create server queue. System HALTED!");
         while (1)
             delay(100);
     }
@@ -129,11 +136,24 @@ void setup()
         xQueueSend(tftQueue, &msg, portMAX_DELAY);
     }
 
+    taskResult = xTaskCreatePinnedToCore(
+        playerTask,
+        "playerTask",
+        4000,
+        NULL,
+        (tskIDLE_PRIORITY + 2) | portPRIVILEGE_BIT,
+        NULL,
+        PRO_CPU_NUM);
+
+    if (taskResult != pdPASS)
+    {
+        log_e("FATAL error! Could not create playerTask. System HALTED!");
+        while (1)
+            delay(100);
+    }
 }
 
 void loop()
 {
     // put your main code here, to run repeatedly:
 }
-
-

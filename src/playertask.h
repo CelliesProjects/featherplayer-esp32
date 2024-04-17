@@ -6,6 +6,10 @@
 
 #include "tfttask.h"
 
+extern uint8_t _playerVolume;
+extern size_t _savedPosition;
+extern bool _paused;
+
 struct playerMessage
 {
     enum action
