@@ -214,8 +214,8 @@ void callbackSetup(AsyncWebServer &server)
 
 void serverTask(void *parameter)
 {
-    AsyncWebServer server(80);
-    AsyncWebSocket ws("/ws");
+    static AsyncWebServer server(80);
+    static AsyncWebSocket ws("/ws");
 
     callbackSetup(server);
     server.begin();

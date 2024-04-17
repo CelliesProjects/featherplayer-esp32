@@ -40,7 +40,7 @@ void playerTask(void *parameter)
     }
     xSemaphoreGive(spiMutex);
 
-    //playListEnd();
+    playListEnd();
 
     log_i("Ready to rock!");
 
