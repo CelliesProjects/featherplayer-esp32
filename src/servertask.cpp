@@ -225,7 +225,7 @@ void serverTask(void *parameter)
     while (1)
     {
         static serverMessage msg{};
-        if (xQueueReceive(serverQueue, &msg, pdMS_TO_TICKS(25)) == pdTRUE)
+        if (xQueueReceive(serverQueue, &msg, pdMS_TO_TICKS(500)) == pdTRUE)
         {
             switch (msg.type)
             {

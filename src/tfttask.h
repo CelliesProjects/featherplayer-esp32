@@ -1,7 +1,7 @@
 #ifndef __TFT_TASK__
 #define __TFT_TASK__
 
-#include <HTTPClient.h>
+#include <WiFi.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_ST7789.h>
 #include <Fonts/FreeSansBold9pt7b.h>
@@ -17,7 +17,7 @@ float map_range(const float input,
                 const float output_start, const float output_end);
 
 void tftTask(void *parameter);
-
+ 
 struct tftMessage
 {
     enum action
