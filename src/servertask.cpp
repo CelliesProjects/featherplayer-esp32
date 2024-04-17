@@ -8,6 +8,7 @@ static inline __attribute__((always_inline)) bool htmlUnmodified(const AsyncWebS
 {
     return request->hasHeader(HEADER_MODIFIED_SINCE) && request->header(HEADER_MODIFIED_SINCE).equals(date);
 }
+
 const char *currentPlayingItem()
 {
     static char buff[25];

@@ -35,7 +35,7 @@ void playerTask(void *parameter)
 
     while (1)
     {
-        static playerMessage msg{};
+        static playerMessage msg;
         if (xQueueReceive(playerQueue, &msg, pdMS_TO_TICKS(25)) == pdTRUE)
         {
             switch (msg.action)

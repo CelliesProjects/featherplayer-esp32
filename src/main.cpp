@@ -15,7 +15,7 @@ uint8_t _playerVolume = VS1053_INITIALVOLUME;
 size_t _savedPosition = 0;
 bool _paused = false;
 
-SemaphoreHandle_t spiMutex = nullptr; // SPI bus is shared between playertask -VS1053- and tfttask -ST7889-
+SemaphoreHandle_t spiMutex = nullptr; // SPI bus is shared between playertask -VS1053- and tfttask -ST7789-
 
 QueueHandle_t tftQueue = nullptr;
 QueueHandle_t playerQueue = nullptr;
@@ -128,14 +128,14 @@ void setup()
     WiFi.setSleep(false);
     while (!WiFi.isConnected())
         delay(10);
-
-    {
-        tftMessage msg;
-        msg.action = tftMessage::SYSTEM_MESSAGE;
-        snprintf(msg.str, sizeof(msg.str), "WiFi OK - %s", WiFi.localIP().toString().c_str());
-        xQueueSend(tftQueue, &msg, portMAX_DELAY);
-    }
-
+    /*
+        {
+            tftMessage msg;
+            msg.action = tftMessage::SYSTEM_MESSAGE;
+            snprintf(msg.str, sizeof(msg.str), "WiFi OK - %s", WiFi.localIP().toString().c_str());
+            xQueueSend(tftQueue, &msg, portMAX_DELAY);
+        }
+    */
     taskResult = xTaskCreatePinnedToCore(
         playerTask,
         "playerTask",
