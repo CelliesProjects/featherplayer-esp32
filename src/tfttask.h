@@ -8,7 +8,7 @@
 #include <Fonts/FreeSansBold18pt7b.h>
 
 /* EXTERNAL DEFINED VARS */
-extern const char *PROGRAM_NAME[];
+extern const char PROGRAM_NAME[];
 extern SemaphoreHandle_t spiMutex;
 extern QueueHandle_t tftQueue;
 
