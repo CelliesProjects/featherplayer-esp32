@@ -1,10 +1,7 @@
 #include <Arduino.h>
 #include <WiFi.h>
-#include <FS.h>
-#include <SD.h>
-
-// #include "playList.h"
-// #include "presets.h"
+//#include <FS.h>
+//#include <SD.h>
 
 #include "tfttask.h"
 #include "playertask.h"
@@ -17,7 +14,7 @@ static uint8_t _playerVolume = VS1053_INITIALVOLUME;
 static size_t _savedPosition = 0;
 static bool _paused = false;
 
-SemaphoreHandle_t spiMutex = nullptr;
+SemaphoreHandle_t spiMutex = nullptr; // SPI bus is shared between playertask -VS1053- and tfttask -ST7889-
 
 QueueHandle_t tftQueue = nullptr;
 QueueHandle_t playerQueue = nullptr;

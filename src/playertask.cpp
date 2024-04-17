@@ -1,8 +1,6 @@
 
 #include "playertask.h"
-#include "presets.h"
 #include "playList.h"
-#include "percentEncode.h"
 
 #define VS1053_CS 6
 #define VS1053_DCS 10

@@ -5,17 +5,27 @@
 #include <AsyncTCP.h>          /* use the esphome.io fork*/
 #include <ESPAsyncWebServer.h> /* use the esphome.io fork*/
 
-#include "percentEncode.h"
 #include "playList.h"
 #include "index_htm_gz.h"
-#include "icons.h"
 
 extern playList_t playList;
+extern String percentEncode(const char *plaintext);
 extern QueueHandle_t serverQueue;
 extern void websocketEventHandler(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len);
 
-AsyncWebServer server(80);
-AsyncWebSocket ws("/ws");
+// icons used in webif
+extern const char *radioicon;
+extern const char *playicon;
+extern const char *libraryicon;
+extern const char *favoriteicon;
+extern const char *pasteicon;
+extern const char *deleteicon;
+extern const char *addfoldericon;
+extern const char *emptyicon;
+extern const char *starticon;
+extern const char *pauseicon;
+extern const char *searchicon;
+extern const char *nosslicon;
 
 struct serverMessage
 {

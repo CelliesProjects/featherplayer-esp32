@@ -68,7 +68,6 @@ const String &favoritesToString(String &s)
     return s;
 }
 
-
 void callbackSetup(AsyncWebServer &server)
 {
     time_t bootTime;
@@ -215,6 +214,9 @@ void callbackSetup(AsyncWebServer &server)
 
 void serverTask(void *parameter)
 {
+    AsyncWebServer server(80);
+    AsyncWebSocket ws("/ws");
+
     callbackSetup(server);
     server.begin();
     ws.onEvent(websocketEventHandler);
