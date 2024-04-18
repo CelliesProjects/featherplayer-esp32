@@ -1,7 +1,6 @@
 
 #include "websocketEventHandler.h"
 
-
 void websocketEventHandler(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len)
 {
     switch (type)
@@ -50,6 +49,13 @@ void websocketEventHandler(AsyncWebSocket *server, AsyncWebSocketClient *client,
     log_d("Largest free continuous memory block: %i bytes", heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT));
 }
 
+void updatePlaylistOverWebSocket()
+{
+    serverMessage msg;
+    msg.type = serverMessage::WS_UPDATE_PLAYLIST;
+    xQueueSend(serverQueue, &msg, portMAX_DELAY);
+}
+
 void handleSingleFrame(AsyncWebSocketClient *client, uint8_t *data, size_t len)
 {
     data[len] = 0;
@@ -83,7 +89,7 @@ void handleSingleFrame(AsyncWebSocketClient *client, uint8_t *data, size_t len)
         pch = strtok(NULL, "\n");
         if (!pch)
             return;
-        //const uint8_t volume = atoi(pch);
+        // const uint8_t volume = atoi(pch);
         /*playerMessage msg;
         msg.action = playerMessage::SET_VOLUME;
         msg.value = volume > VS1053_MAXVOLUME ? VS1053_MAXVOLUME : volume;
@@ -182,9 +188,7 @@ void handleSingleFrame(AsyncWebSocketClient *client, uint8_t *data, size_t len)
         if (index < playList.currentItem())
         {
             playList.setCurrentItem(playList.currentItem() - 1);
-            /*playerMessage msg;
-            msg.action = playerMessage::WS_UPDATE_PLAYLIST;
-            xQueueSend(playerQueue, &msg, portMAX_DELAY);*/
+            updatePlaylistOverWebSocket();
         }
         //  deleted item was the current item
         else if (playList.currentItem() == index)
@@ -192,47 +196,37 @@ void handleSingleFrame(AsyncWebSocketClient *client, uint8_t *data, size_t len)
             // play the next item if there is one
             if (playList.currentItem() < playList.size())
             {
-                /*playerMessage msg;
+                playerMessage msg;
                 msg.action = playerMessage::START_ITEM;
                 msg.value = playList.currentItem();
                 xQueueSend(playerQueue, &msg, portMAX_DELAY);
-
-                msg.action = playerMessage::WS_UPDATE_PLAYLIST;
-                xQueueSend(playerQueue, &msg, portMAX_DELAY);*/
+                updatePlaylistOverWebSocket();
             }
             else
             {
-                playListEnd();
-                /*playerMessage msg;
+                playerMessage msg;
                 msg.action = playerMessage::STOPSONG;
                 xQueueSend(playerQueue, &msg, portMAX_DELAY);
-
-                msg.action = playerMessage::WS_UPDATE_PLAYLIST;
-                xQueueSend(playerQueue, &msg, portMAX_DELAY);*/
+                updatePlaylistOverWebSocket();
+                playListEnd();
             }
         }
+
         // deleted item was after current item
         else
-        {
-            /*playerMessage msg;
-            msg.action = playerMessage::WS_UPDATE_PLAYLIST;
-            xQueueSend(playerQueue, &msg, portMAX_DELAY);*/
-        }
+            updatePlaylistOverWebSocket();
     }
 
     else if (!strcmp("clearlist", pch))
     {
         if (!playList.size())
             return;
-        {
-            /*playerMessage msg;
-            msg.action = playerMessage::STOPSONG;
-            xQueueSend(playerQueue, &msg, portMAX_DELAY);*/
-        }
-        /*playList.clear();
         playerMessage msg;
-        msg.action = playerMessage::WS_UPDATE_PLAYLIST;
-        xQueueSend(playerQueue, &msg, portMAX_DELAY);*/
+        msg.action = playerMessage::STOPSONG;
+        xQueueSend(playerQueue, &msg, portMAX_DELAY);
+
+        playList.clear();
+        updatePlaylistOverWebSocket();
         playListEnd();
     }
 
@@ -438,26 +432,20 @@ void handleMultiFrame(AsyncWebSocketClient *client, uint8_t *data, size_t len, A
 
             if (!itemsAdded)
             {
-
             }
 
             if (itemsAdded < number_of_urls)
             {
-
             }
 
             if (itemsAdded == number_of_urls)
             {
-
             }
-
 
             if (startnow || playList.currentItem() == PLAYLIST_STOPPED)
             {
-
             }
         }
         message.clear();
     }
 }
-
