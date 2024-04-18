@@ -76,7 +76,7 @@ void setup()
         "tftTask",
         2700,
         NULL,
-        (tskIDLE_PRIORITY + 2) | portPRIVILEGE_BIT,
+        ((tskIDLE_PRIORITY + 2) | portPRIVILEGE_BIT),
         NULL,
         APP_CPU_NUM);
 
@@ -145,7 +145,7 @@ void setup()
         "playerTask",
         4000,
         NULL,
-        (tskIDLE_PRIORITY + 2) | portPRIVILEGE_BIT,
+        ((tskIDLE_PRIORITY + 2) | portPRIVILEGE_BIT),
         NULL,
         PRO_CPU_NUM);
 
