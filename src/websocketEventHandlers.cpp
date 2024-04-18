@@ -427,11 +427,7 @@ void handleSingleFrame(AsyncWebSocketClient *client, uint8_t *data, size_t len)
         const auto cnt = playList.size();
         handleFavoriteToPlaylist(client, pch, startNow);
         if (playList.size() > cnt)
-        {
-            serverMessage msg;
-            msg.type = serverMessage::WS_UPDATE_PLAYLIST;
-            xQueueSend(serverQueue, &msg, portMAX_DELAY);
-        }
+            updatePlaylistOverWebSocket();
     }
 
     else if (!strcmp("deletefavorite", pch))
