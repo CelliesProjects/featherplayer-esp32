@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include <vector>
+#include <mutex>
 #include "presets.h"
 
 #define PLAYLIST_MAX_ITEMS 100
@@ -17,6 +18,7 @@ enum streamType
     HTTP_PRESET,
     TYPE_ERROR
 };
+
 static const char *typeStr[] = {"FILE", "FOUND", "FAVO", "PRESET"};
 
 struct playListItem
@@ -31,27 +33,34 @@ class playList_t
 {
 
 public:
+    playList_t() : _mutex() {}
+
     ~playList_t()
     {
-        list.clear();
-    }
+        clear();
+    }    
+
     int size()
     {
+        std::lock_guard<std::mutex> lock(_mutex);
         return list.size();
     }
 
     void get(const uint32_t index, playListItem &item)
     {
+        std::lock_guard<std::mutex> lock(_mutex);
         item = (index < list.size()) ? list[index] : (playListItem){};
     }
 
     const String url(const uint32_t index)
     {
+        std::lock_guard<std::mutex> lock(_mutex);
         return (index < list.size()) ? ((list[index].type == HTTP_PRESET) ? preset[list[index].index].url : list[index].url) : "";
     }
 
     streamType type(const uint32_t index)
     {
+        std::lock_guard<std::mutex> lock(_mutex);
         if (size() < index)
             return TYPE_ERROR;
         return list[index].type;
@@ -59,6 +68,7 @@ public:
 
     const String name(const uint32_t index)
     {
+        std::lock_guard<std::mutex> lock(_mutex);
         if (index >= size())
             return "";
         switch (list[index].type)
@@ -74,40 +84,42 @@ public:
 
     void add(const playListItem &item)
     {
+        std::lock_guard<std::mutex> lock(_mutex);
         if (list.size() < PLAYLIST_MAX_ITEMS)
-        {
             list.push_back(item);
-        }
     }
+
     void remove(const uint32_t index)
     {
+        std::lock_guard<std::mutex> lock(_mutex);
         if (list.size() > index)
-        {
             list.erase(list.begin() + index);
-        }
     }
+
     void clear()
     {
-        if (list.size())
-        {
-            list.clear();
-        }
+        std::lock_guard<std::mutex> lock(_mutex);
+        list.clear();
     }
+
     const String &toString(String &s);
 
     int8_t currentItem()
     {
+        std::lock_guard<std::mutex> lock(_mutex);
         return _currentItem;
     }
 
     void setCurrentItem(int8_t index)
     {
+        std::lock_guard<std::mutex> lock(_mutex);
         _currentItem = index;
     }
 
 private:
     std::vector<playListItem> list;
     int8_t _currentItem{PLAYLIST_STOPPED};
+    std::mutex _mutex;
 };
 
 #endif
