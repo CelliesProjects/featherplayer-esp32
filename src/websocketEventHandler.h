@@ -10,8 +10,7 @@
 extern bool _paused;
 extern playList_t playList;
 extern void playListEnd();
-
-static const char *FAVORITES_FOLDER = "/"; /* if this is a folder use a closing slash */
+extern const char *FAVORITES_FOLDER;
 
 void websocketEventHandler(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len);
 void handleSingleFrame(AsyncWebSocketClient *client, uint8_t *data, size_t len);

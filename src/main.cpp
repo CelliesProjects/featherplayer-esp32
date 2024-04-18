@@ -3,6 +3,7 @@
 // #include <FS.h>
 // #include <SD.h>
 
+#include "websocketEventHandler.h"
 #include "icons.h"
 #include "percentEncode.h"
 #include "tfttask.h"
@@ -11,7 +12,8 @@
 
 #include "WiFiCredentials.h"
 
-const char PROGRAM_NAME[] = {"featherplayer-esp32"};
+const char *PROGRAM_NAME = "featherplayer-esp32";
+const char *FAVORITES_FOLDER = "/"; /* if this is a folder use a closing slash */
 playList_t playList;
 uint8_t _playerVolume = VS1053_INITIALVOLUME;
 size_t _savedPosition = 0;

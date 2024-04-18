@@ -1,6 +1,5 @@
 #include "servertask.h"
 
-static const char *FAVORITES_FOLDER = "/"; /* if this is a folder use a closing slash */
 static const char *VOLUME_HEADER = "volume";
 static const char *HEADER_MODIFIED_SINCE = "If-Modified-Since";
 

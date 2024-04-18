@@ -8,6 +8,7 @@
 #include "playList.h"
 #include "index_htm_gz.h"
 
+extern const char *FAVORITES_FOLDER;
 extern playList_t playList;
 extern String percentEncode(const char *plaintext);
 extern QueueHandle_t serverQueue;
