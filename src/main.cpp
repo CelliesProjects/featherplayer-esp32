@@ -143,7 +143,7 @@ void setup()
     taskResult = xTaskCreatePinnedToCore(
         playerTask,
         "playerTask",
-        4000,
+        8000,
         NULL,
         ((tskIDLE_PRIORITY + 2) | portPRIVILEGE_BIT),
         NULL,
