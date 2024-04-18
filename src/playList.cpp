@@ -2,7 +2,7 @@
 
 const String &playList_t::toString(String &s)
 {
-    std::lock_guard<std::mutex> lock(_mutex);
+    std::lock_guard<std::mutex> lock(listMutex);
     s = "playlist\n";
     s.concat(currentItem());
     s.concat('\n');

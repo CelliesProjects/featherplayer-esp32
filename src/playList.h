@@ -33,7 +33,7 @@ class playList_t
 {
 
 public:
-    playList_t() : _mutex() {}
+    playList_t() : listMutex(), currentItemMutex() {}
 
     ~playList_t()
     {
@@ -42,25 +42,25 @@ public:
 
     int size()
     {
-        std::lock_guard<std::mutex> lock(_mutex);
+        std::lock_guard<std::mutex> lock(listMutex);
         return list.size();
     }
 
     void get(const uint32_t index, playListItem &item)
     {
-        std::lock_guard<std::mutex> lock(_mutex);
+        std::lock_guard<std::mutex> lock(listMutex);
         item = (index < list.size()) ? list[index] : (playListItem){};
     }
 
     const String url(const uint32_t index)
     {
-        std::lock_guard<std::mutex> lock(_mutex);
+        std::lock_guard<std::mutex> lock(listMutex);
         return (index < list.size()) ? ((list[index].type == HTTP_PRESET) ? preset[list[index].index].url : list[index].url) : "";
     }
 
     streamType type(const uint32_t index)
     {
-        std::lock_guard<std::mutex> lock(_mutex);
+        std::lock_guard<std::mutex> lock(listMutex);
         if (size() < index)
             return TYPE_ERROR;
         return list[index].type;
@@ -68,7 +68,7 @@ public:
 
     const String name(const uint32_t index)
     {
-        std::lock_guard<std::mutex> lock(_mutex);
+        std::lock_guard<std::mutex> lock(listMutex);
         if (index >= size())
             return "";
         switch (list[index].type)
@@ -84,21 +84,21 @@ public:
 
     void add(const playListItem &item)
     {
-        std::lock_guard<std::mutex> lock(_mutex);
+        std::lock_guard<std::mutex> lock(listMutex);
         if (list.size() < PLAYLIST_MAX_ITEMS)
             list.push_back(item);
     }
 
     void remove(const uint32_t index)
     {
-        std::lock_guard<std::mutex> lock(_mutex);
+        std::lock_guard<std::mutex> lock(listMutex);
         if (list.size() > index)
             list.erase(list.begin() + index);
     }
 
     void clear()
     {
-        std::lock_guard<std::mutex> lock(_mutex);
+        std::lock_guard<std::mutex> lock(listMutex);
         list.clear();
     }
 
@@ -106,20 +106,21 @@ public:
 
     int8_t currentItem()
     {
-        std::lock_guard<std::mutex> lock(_mutex);
+        std::lock_guard<std::mutex> lock(currentItemMutex);
         return _currentItem;
     }
 
     void setCurrentItem(int8_t index)
     {
-        std::lock_guard<std::mutex> lock(_mutex);
+        std::lock_guard<std::mutex> lock(currentItemMutex);
         _currentItem = index;
     }
 
 private:
     std::vector<playListItem> list;
     int8_t _currentItem{PLAYLIST_STOPPED};
-    std::mutex _mutex;
+    std::mutex listMutex;
+    std::mutex currentItemMutex;
 };
 
 #endif
