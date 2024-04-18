@@ -9,6 +9,12 @@ void websocketEventHandler(AsyncWebSocket *server, AsyncWebSocketClient *client,
     case WS_EVT_CONNECT:
     {
         log_i("client %i connected on %s", client->id(), server->url());
+        serverMessage msg;
+        msg.singleClient = true;
+        msg.value = client->id();
+
+        msg.type = serverMessage::WS_UPDATE_PLAYLIST;
+        xQueueSend(serverQueue, &msg, portMAX_DELAY);
         break;
     }
     case WS_EVT_DISCONNECT:
