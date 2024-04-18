@@ -43,20 +43,21 @@ void playerTask(void *parameter)
 
             case playerMessage::SET_VOLUME:
                 _playerVolume = msg.value > VS1053_MAXVOLUME ? VS1053_MAXVOLUME : msg.value;
-                //ws.printfAll("%s\n%i\n", VOLUME_HEADER, _playerVolume);
+                // ws.printfAll("%s\n%i\n", VOLUME_HEADER, _playerVolume);
                 xSemaphoreTake(spiMutex, portMAX_DELAY);
                 audio.setVolume(_playerVolume);
                 xSemaphoreGive(spiMutex);
                 break;
 
             case playerMessage::START_ITEM:
-                if (msg.value >= playList.size())
+                if (playList.size() < msg.value)
                 {
-                    playListEnd();
+                    log_e("out of bound item requested");
                     break;
                 }
 
                 playList.setCurrentItem(msg.value);
+
                 if (audio.isRunning())
                 {
                     xSemaphoreTake(spiMutex, portMAX_DELAY);
@@ -64,34 +65,14 @@ void playerTask(void *parameter)
                     xSemaphoreGive(spiMutex);
                 }
 
-                if (_paused)
-                    //ws.textAll("status\nplaying\n");
-
-                if (!_paused && !msg.offset)
-                {
-                    /*tftMessage msg;
-                    msg.action = tftMessage::CLEAR_SCREEN;
-                    xQueueSend(tftQueue, &msg, portMAX_DELAY);
-                    snprintf(msg.str, sizeof(msg.str), "connecting...");
-                    msg.action = tftMessage::SYSTEM_MESSAGE;
-                    xQueueSend(tftQueue, &msg, portMAX_DELAY);*/
-                }
-
                 /* keep trying until some stream starts or we reach the end of playlist */
                 while (playList.currentItem() < playList.size())
                 {
-                    if (!_paused && !msg.offset)
                     {
-                        //ws.textAll("streamtitle\n\n");
-                        char buff[255];
-                        snprintf(buff, sizeof(buff), "showstation\n%s\n%s\n",
-                                 playList.name(playList.currentItem()).c_str(),
-                                 typeStr[playList.type(playList.currentItem())]);
-                        //ws.textAll(buff);
+                        serverMessage msg;
+                        msg.type = serverMessage::WS_UPDATE_NOWPLAYING;
+                        xQueueSend(serverQueue, &msg, portMAX_DELAY);
                     }
-
-                    if (!msg.offset)
-                        //ws.textAll(currentPlayingItem());
 
                     xSemaphoreTake(spiMutex, portMAX_DELAY);
                     const auto result = audio.connecttohost(playList.url(playList.currentItem()).c_str(), LIBRARY_USER, LIBRARY_PWD, msg.offset);
@@ -140,7 +121,7 @@ void playerTask(void *parameter)
         {
             log_d("Buffer status: %s", audio.bufferStatus());
 
-            //ws.printfAll("progress\n%i\n%i\n", audio.position(), audio.size());
+            // ws.printfAll("progress\n%i\n%i\n", audio.position(), audio.size());
             savedTime = millis();
             _savedPosition = audio.position();
         }
@@ -151,7 +132,6 @@ void playerTask(void *parameter)
             audio.loop();
             xSemaphoreGive(spiMutex);
         }
-
     }
 }
 

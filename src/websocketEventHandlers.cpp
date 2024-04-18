@@ -161,10 +161,10 @@ void handleSingleFrame(AsyncWebSocketClient *client, uint8_t *data, size_t len)
         const uint8_t index = atoi(pch);
         if (index < playList.size())
         {
-            /*playerMessage msg;
+            playerMessage msg;
             msg.action = playerMessage::START_ITEM;
             msg.value = index;
-            xQueueSend(playerQueue, &msg, portMAX_DELAY);*/
+            xQueueSend(playerQueue, &msg, portMAX_DELAY);
         }
     }
 

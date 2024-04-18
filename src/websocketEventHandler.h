@@ -7,6 +7,7 @@
 
 #include "playList.h"
 #include "servertask.h"
+#include "playertask.h"
 
 extern bool _paused;
 extern playList_t playList;

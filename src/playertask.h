@@ -4,6 +4,7 @@
 #include <VS1053.h> /* https://github.com/baldram/ESP_VS1053_Library */
 #include <ESP32_VS1053_Stream.h>
 
+#include "servertask.h"
 #include "tfttask.h"
 #include "playList.h"
 
