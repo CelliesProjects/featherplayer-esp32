@@ -3,7 +3,8 @@
 
 void updateTFT()
 {
-    /*tftMessage msg;
+    /*
+    tftMessage msg;
     playListItem item;
 
     msg.action = tftMessage::CLEAR_SCREEN;
@@ -11,7 +12,8 @@ void updateTFT()
 
     msg.action = tftMessage::SHOW_STATION;
     snprintf(msg.str, sizeof(msg.str), "%s", playList.name(playList.currentItem()).c_str());
-    xQueueSend(tftQueue, &msg, portMAX_DELAY);*/
+    xQueueSend(tftQueue, &msg, portMAX_DELAY);
+    */
 }
 
 void playerTask(void *parameter)
@@ -120,8 +122,11 @@ void playerTask(void *parameter)
         if (audio.size() && millis() - savedTime > UPDATE_INTERVAL_MS && audio.position() != _savedPosition)
         {
             log_d("Buffer status: %s", audio.bufferStatus());
-
-            // ws.printfAll("progress\n%i\n%i\n", audio.position(), audio.size());
+            serverMessage msg;
+            msg.type = serverMessage::WS_UPDATE_PROGRESS;
+            msg.value = audio.position();
+            msg.value2 = audio.size();
+            xQueueSend(serverQueue, &msg, portMAX_DELAY);
             savedTime = millis();
             _savedPosition = audio.position();
         }

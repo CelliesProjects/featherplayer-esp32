@@ -385,11 +385,11 @@ void handleSingleFrame(AsyncWebSocketClient *client, uint8_t *data, size_t len)
         pch = strtok(NULL, "\n");
         if (!pch)
             return;
-        /*playerMessage msg;
+        playerMessage msg;
         msg.action = playerMessage::START_ITEM;
         msg.value = playList.currentItem();
         msg.offset = atoi(pch);
-        xQueueSend(playerQueue, &msg, portMAX_DELAY);*/
+        xQueueSend(playerQueue, &msg, portMAX_DELAY);
     }
 
     else if (!strcmp("currenttofavorites", pch))

@@ -283,7 +283,7 @@ void serverTask(void *parameter)
                     ws.textAll(buff);
                 break;
             }
-            
+
             case serverMessage::WS_UPDATE_STATION:
             {
                 static char buff[300]{};
@@ -300,6 +300,13 @@ void serverTask(void *parameter)
                 break;
             }
 
+            case serverMessage::WS_UPDATE_PROGRESS:
+            {
+                char buff[32];
+                snprintf(buff, sizeof(buff), "progress\n%i\n%i\n", msg.value, msg.value2);
+                ws.textAll(buff);
+                break;
+            }
             default:
                 log_w("unhandled player message with number %i", msg.type);
             }
