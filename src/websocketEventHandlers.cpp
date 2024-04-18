@@ -245,29 +245,25 @@ void handleSingleFrame(AsyncWebSocketClient *client, uint8_t *data, size_t len)
         playList.add({HTTP_PRESET, "", "", index});
         if (playList.size() == previousSize)
         {
-            /*playerMessage msg;
+            serverMessage msg;
+            msg.type = serverMessage::WS_PASS_MESSAGE;
             msg.singleClient = true;
             msg.value = client->id();
-            snprintf(msg.str, sizeof(msg.str), "%s\nERROR: Could not add '%s' to playlist", MESSAGE_HEADER, preset[index].name.c_str());
-            xQueueSend(playerQueue, &msg, portMAX_DELAY);*/
+            snprintf(msg.str, sizeof(msg.str), "message\nERROR: Could not add '%s' to playlist", preset[index].name.c_str());
+            xQueueSend(serverQueue, &msg, portMAX_DELAY);
             return;
         }
 
         log_d("Added '%s' to playlist", preset[index].name.c_str());
 
-        {
-            /*playerMessage msg;
-            msg.action = playerMessage::WS_UPDATE_PLAYLIST;
-            xQueueSend(playerQueue, &msg, portMAX_DELAY);*/
-        }
+        updatePlaylistOverWebSocket();
 
         if (startnow || playList.currentItem() == PLAYLIST_STOPPED)
         {
-            log_d("starting preset");
-            /*playerMessage msg;
+            playerMessage msg;
             msg.action = playerMessage::START_ITEM;
             msg.value = playList.size() - 1;
-            xQueueSend(playerQueue, &msg, portMAX_DELAY);*/
+            xQueueSend(playerQueue, &msg, portMAX_DELAY);
         }
     }
 
