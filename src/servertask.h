@@ -9,6 +9,7 @@
 #include "index_htm_gz.h"
 
 extern const char *FAVORITES_FOLDER;
+extern uint8_t _playerVolume;
 extern playList_t playList;
 extern String percentEncode(const char *plaintext);
 extern QueueHandle_t serverQueue;
@@ -37,6 +38,7 @@ struct serverMessage
         WS_UPDATE_NOWPLAYING,
         WS_UPDATE_FAVORITES,
         WS_UPDATE_PLAYLIST,
+        WS_UPDATE_VOLUME,
         WS_PASS_MESSAGE
     };
     type type;

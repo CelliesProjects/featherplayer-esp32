@@ -273,6 +273,17 @@ void serverTask(void *parameter)
                 break;
             }
 
+            case serverMessage::WS_UPDATE_VOLUME:
+            {
+                char buff[20];
+                snprintf(buff, sizeof(buff), "volume\n%i\n", _playerVolume);
+                if (msg.singleClient)
+                    ws.text(msg.value, buff);
+                else
+                    ws.textAll(buff);
+                break;
+            }
+            
             case serverMessage::WS_UPDATE_STATION:
             {
                 static char buff[300]{};
