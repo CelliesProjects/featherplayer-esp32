@@ -192,24 +192,22 @@ void handleSingleFrame(AsyncWebSocketClient *client, uint8_t *data, size_t len)
 
         if (itemsAdded > 1)
         {
-            /*playerMessage msg;
-            msg.action = playerMessage::WS_PASS_MESSAGE;
+            serverMessage msg;
+            msg.type = serverMessage::WS_PASS_MESSAGE;
             msg.singleClient = true;
             msg.value = client->id();
-            snprintf(msg.str, sizeof(msg.str), "%s\nAdded %i items to playlist", MESSAGE_HEADER, itemsAdded);
-            xQueueSend(playerQueue, &msg, portMAX_DELAY);*/
+            snprintf(msg.str, sizeof(msg.str), "message\nAdded %i items to playlist", itemsAdded);
+            xQueueSend(serverQueue, &msg, portMAX_DELAY);
         }
 
-        /*playerMessage msg;
-        msg.action = playerMessage::WS_UPDATE_PLAYLIST;
-        xQueueSend(playerQueue, &msg, portMAX_DELAY);*/
+        updatePlaylistOverWebSocket();
 
         if (startnow || playList.currentItem() == PLAYLIST_STOPPED)
         {
-            /*playerMessage msg;
+            playerMessage msg;
             msg.action = playerMessage::START_ITEM;
             msg.value = previousSize;
-            xQueueSend(playerQueue, &msg, portMAX_DELAY);*/
+            xQueueSend(playerQueue, &msg, portMAX_DELAY);
         }
     }
 
