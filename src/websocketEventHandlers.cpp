@@ -49,11 +49,63 @@ void websocketEventHandler(AsyncWebSocket *server, AsyncWebSocketClient *client,
     log_d("Largest free continuous memory block: %i bytes", heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT));
 }
 
-void updatePlaylistOverWebSocket()
+static void updatePlaylistOverWebSocket()
 {
     serverMessage msg;
     msg.type = serverMessage::WS_UPDATE_PLAYLIST;
     xQueueSend(serverQueue, &msg, portMAX_DELAY);
+}
+
+static void handleFavoriteToPlaylist(AsyncWebSocketClient *client, const char *filename, const bool startNow)
+{
+    if (PLAYLIST_MAX_ITEMS == playList.size())
+    {
+        log_e("ERROR! Could not add %s to playlist", filename);
+        serverMessage msg;
+        msg.type = serverMessage::WS_PASS_MESSAGE;
+        msg.singleClient = true;
+        msg.value = client->id();
+        snprintf(msg.str, sizeof(msg.str), "message\nERROR: Could not add '%s' to playlist", filename);
+        xQueueSend(serverQueue, &msg, portMAX_DELAY);
+        return;
+    }
+    char path[strlen(FAVORITES_FOLDER) + strlen(filename) + 1];
+    snprintf(path, sizeof(path), "%s%s", FAVORITES_FOLDER, filename);
+    File file = FFat.open(path);
+    if (!file)
+    {
+        log_e("ERROR! Could not open %s", filename);
+        serverMessage msg;
+        msg.type = serverMessage::WS_PASS_MESSAGE;
+        msg.singleClient = true;
+        msg.value = client->id();
+        snprintf(msg.str, sizeof(msg.str), "message\nERROR: Could not add '%s' to playlist", filename);
+        xQueueSend(serverQueue, &msg, portMAX_DELAY);
+        return;
+    }
+    char url[file.size() + 1];
+    auto cnt = 0;
+    char ch = (char)file.read();
+    while (ch != '\n' && file.available())
+    {
+        url[cnt++] = ch;
+        ch = (char)file.read();
+    }
+    url[cnt] = 0;
+    file.close();
+    const auto previousSize = playList.size();
+    playList.add({HTTP_FAVORITE, filename, url, 0});
+
+    log_d("favorite to playlist: %s -> %s", filename, url);
+
+    if (startNow || playList.currentItem() == PLAYLIST_STOPPED)
+    {
+        playList.setCurrentItem(previousSize);
+        playerMessage msg;
+        msg.action = playerMessage::START_ITEM;
+        msg.value = playList.currentItem();
+        xQueueSend(playerQueue, &msg, portMAX_DELAY);
+    }
 }
 
 void handleSingleFrame(AsyncWebSocketClient *client, uint8_t *data, size_t len)
@@ -75,13 +127,15 @@ void handleSingleFrame(AsyncWebSocketClient *client, uint8_t *data, size_t len)
 
     if (!_paused && !strcmp("pause", pch))
     {
-        /*playerMessage msg;
+        /*
+        playerMessage msg;
         msg.action = playerMessage::PAUSE;
         xQueueSend(playerQueue, &msg, portMAX_DELAY);
 
         msg.action = playerMessage::WS_PASS_MESSAGE;
         snprintf(msg.str, sizeof(msg.str), "status\npaused\n");
-        xQueueSend(playerQueue, &msg, portMAX_DELAY);*/
+        xQueueSend(playerQueue, &msg, portMAX_DELAY);
+        */
     }
 
     else if (!strcmp("volume", pch))
@@ -89,21 +143,21 @@ void handleSingleFrame(AsyncWebSocketClient *client, uint8_t *data, size_t len)
         pch = strtok(NULL, "\n");
         if (!pch)
             return;
-        // const uint8_t volume = atoi(pch);
-        /*playerMessage msg;
+         const uint8_t volume = atoi(pch);
+        playerMessage msg;
         msg.action = playerMessage::SET_VOLUME;
         msg.value = volume > VS1053_MAXVOLUME ? VS1053_MAXVOLUME : volume;
-        xQueueSend(playerQueue, &msg, portMAX_DELAY);*/
+        xQueueSend(playerQueue, &msg, portMAX_DELAY);
     }
 
     else if (!strcmp("previous", pch))
     {
         if (playList.currentItem() > 0)
         {
-            /*playerMessage msg;
+            playerMessage msg;
             msg.action = playerMessage::START_ITEM;
             msg.value = playList.currentItem() - 1;
-            xQueueSend(playerQueue, &msg, portMAX_DELAY);*/
+            xQueueSend(playerQueue, &msg, portMAX_DELAY);
         }
     }
 
@@ -113,10 +167,10 @@ void handleSingleFrame(AsyncWebSocketClient *client, uint8_t *data, size_t len)
             return;
         if (playList.currentItem() < playList.size() - 1)
         {
-            /*playerMessage msg;
+            playerMessage msg;
             msg.action = playerMessage::START_ITEM;
             msg.value = playList.currentItem() + 1;
-            xQueueSend(playerQueue, &msg, portMAX_DELAY);*/
+            xQueueSend(playerQueue, &msg, portMAX_DELAY);
         }
     }
 
@@ -303,21 +357,22 @@ void handleSingleFrame(AsyncWebSocketClient *client, uint8_t *data, size_t len)
 
         if (playList.size() == PLAYLIST_MAX_ITEMS)
         {
-            /*playerMessage msg;
+            serverMessage msg;
+            msg.type = serverMessage::WS_PASS_MESSAGE;
             msg.singleClient = true;
             msg.value = client->id();
-            snprintf(msg.str, sizeof(msg.str), "%s\nERROR: Could not add '%s' to playlist!", MESSAGE_HEADER, pch);
-            xQueueSend(playerQueue, &msg, portMAX_DELAY);*/
+            snprintf(msg.str, sizeof(msg.str), "message\nERROR: Could not add '%s' to playlist!", pch);
+            xQueueSend(serverQueue, &msg, portMAX_DELAY);
             return;
         }
-        /*const auto cnt = playList.size();
+        const auto cnt = playList.size();
         handleFavoriteToPlaylist(client, pch, startNow);
         if (playList.size() > cnt)
         {
-            playerMessage msg;
-            msg.action = playerMessage::WS_UPDATE_PLAYLIST;
-            xQueueSend(playerQueue, &msg, portMAX_DELAY);
-        }*/
+            serverMessage msg;
+            msg.type = serverMessage::WS_UPDATE_PLAYLIST;
+            xQueueSend(serverQueue, &msg, portMAX_DELAY);
+        }
     }
 
     else if (!strcmp("deletefavorite", pch))
