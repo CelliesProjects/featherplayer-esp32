@@ -189,3 +189,20 @@ void audio_eof_stream(const char *info)
     }
     playListEnd();
 }
+
+void audio_showstreamtitle(const char *info)
+{
+    log_i("STREAMTITLE: %s", info);
+
+    {
+        serverMessage msg;
+        msg.type = serverMessage::WS_UPDATE_STREAMTITLE;
+        snprintf(msg.str, sizeof(msg.str), "%s", info);
+        xQueueSend(serverQueue, &msg, portMAX_DELAY);
+    }
+
+    tftMessage msg;
+    msg.action = tftMessage::SHOW_TITLE;
+    snprintf(msg.str, sizeof(msg.str), "%s", info);
+    xQueueSend(tftQueue, &msg, portMAX_DELAY);
+}
