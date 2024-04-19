@@ -33,8 +33,6 @@ void playerTask(void *parameter)
 
     log_i("Ready to rock!");
 
-    audio.connecttohost("http://icecast.omroep.nl/radio6-bb-mp3");
-
     while (1)
     {
         static playerMessage msg;
@@ -144,25 +142,20 @@ void playListEnd()
 {
     playList.setCurrentItem(PLAYLIST_STOPPED);
 
-    // to limit the scope of the different msgs we use extra scope blocks here
     {
         serverMessage msg;
-        // websocket: send current item
         msg.type = serverMessage::WS_UPDATE_NOWPLAYING;
         xQueueSend(serverQueue, &msg, portMAX_DELAY);
 
-        // websocket: send program name and version
         snprintf(msg.str, sizeof(msg.str), "%s %s", PROGRAM_NAME, GIT_VERSION);
         msg.type = serverMessage::WS_UPDATE_STATION;
         xQueueSend(serverQueue, &msg, portMAX_DELAY);
 
-        // websocket: send radiobrowser link as streamtitle
         snprintf(msg.str, sizeof(msg.str), "%s", "Search API provided by: <a href=\"https://www.radio-browser.info/\" target=\"_blank\"><span style=\"white-space:nowrap;\">radio-browser.info</span></a>");
         msg.type = serverMessage::WS_UPDATE_STREAMTITLE;
         xQueueSend(serverQueue, &msg, portMAX_DELAY);
     }
 
-    // clear tft and show system info
     tftMessage msg;
     msg.action = tftMessage::CLEAR_SCREEN;
     xQueueSend(tftQueue, &msg, portMAX_DELAY);
@@ -171,8 +164,6 @@ void playListEnd()
     xQueueSend(tftQueue, &msg, portMAX_DELAY);
 
     msg.action = tftMessage::SHOW_TITLE;
-    snprintf(msg.str, sizeof(msg.str), "%s - %s", (char *)PROGRAM_NAME, (char *)GIT_VERSION);
+    snprintf(msg.str, sizeof(msg.str), "%s - %s", PROGRAM_NAME, GIT_VERSION);
     xQueueSend(tftQueue, &msg, portMAX_DELAY);
-
-    log_i("playlist ended");
 }
