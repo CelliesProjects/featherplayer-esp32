@@ -19,6 +19,10 @@ void websocketEventHandler(AsyncWebSocket *server, AsyncWebSocketClient *client,
         xQueueSend(serverQueue, &msg, portMAX_DELAY);
         msg.type = serverMessage::WS_UPDATE_VOLUME;
         xQueueSend(serverQueue, &msg, portMAX_DELAY);
+        msg.type = serverMessage::WS_UPDATE_STREAMTITLE;
+        xQueueSend(serverQueue, &msg, portMAX_DELAY);
+        msg.type = serverMessage::WS_UPDATE_STATION;
+        xQueueSend(serverQueue, &msg, portMAX_DELAY);
         break;
     }
     case WS_EVT_DISCONNECT:
@@ -36,9 +40,9 @@ void websocketEventHandler(AsyncWebSocket *server, AsyncWebSocketClient *client,
         if (info->opcode == WS_TEXT)
         {
             if (info->final && info->index == 0 && info->len == len)
-                handleSingleFrame(/*server,*/ client, data, len);
+                handleSingleFrame(client, data, len);
             else
-                handleMultiFrame(/*server,*/ client, data, len, info);
+                handleMultiFrame(client, data, len, info);
         }
         break;
     }
