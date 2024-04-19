@@ -61,7 +61,7 @@ public:
     streamType type(const uint32_t index)
     {
         std::lock_guard<std::mutex> lock(listMutex);
-        if (size() < index)
+        if (list.size() < index)
             return TYPE_ERROR;
         return list[index].type;
     }
@@ -69,7 +69,7 @@ public:
     const String name(const uint32_t index)
     {
         std::lock_guard<std::mutex> lock(listMutex);
-        if (index >= size())
+        if (index >= list.size())
             return "";
         switch (list[index].type)
         {
@@ -118,8 +118,8 @@ public:
 
 private:
     std::vector<playListItem> list;
-    int8_t _currentItem{PLAYLIST_STOPPED};
     std::mutex listMutex;
+    int8_t _currentItem{PLAYLIST_STOPPED};
     std::mutex currentItemMutex;
 };
 
