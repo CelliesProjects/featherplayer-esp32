@@ -2,10 +2,10 @@
 
 const String &playList_t::toString(String &s)
 {
-    std::lock_guard<std::mutex> lock(listMutex);
     s = "playlist\n";
     s.concat(currentItem());
     s.concat('\n');
+    std::lock_guard<std::mutex> lock(listMutex);
     for (const auto &item : list)
     {
         switch (item.type)
