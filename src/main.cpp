@@ -47,7 +47,7 @@ void setup()
             delay(100);
     }
 
-    tftQueue = xQueueCreate(5, sizeof(struct tftMessage));
+    tftQueue = xQueueCreate(2, sizeof(struct tftMessage));
     if (!tftQueue)
     {
         log_e("FATAL error! could not create display queue. System HALTED!");
@@ -55,7 +55,7 @@ void setup()
             delay(100);
     }
 
-    playerQueue = xQueueCreate(5, sizeof(struct playerMessage));
+    playerQueue = xQueueCreate(2, sizeof(struct playerMessage));
     if (!playerQueue)
     {
         log_e("FATAL error! could not create player queue. System HALTED!");
@@ -63,7 +63,7 @@ void setup()
             delay(100);
     }
 
-    serverQueue = xQueueCreate(5, sizeof(struct serverMessage));
+    serverQueue = xQueueCreate(2, sizeof(struct serverMessage));
     if (!serverQueue)
     {
         log_e("FATAL error! could not create server queue. System HALTED!");
@@ -175,7 +175,17 @@ void setup()
     vTaskDelete(NULL);
 }
 
-void loop()
+void loop() {}
+
+void audio_eof_stream(const char *info)
 {
-    // put your main code here, to run repeatedly:
+    if (playList.currentItem() < playList.size() - 1)
+    {
+        playerMessage msg;
+        msg.action = playerMessage::START_ITEM;
+        msg.value = playList.currentItem() + 1;
+        xQueueSend(playerQueue, &msg, portMAX_DELAY);
+        return;
+    }
+    playListEnd();
 }
