@@ -146,20 +146,20 @@ void playListEnd()
 
     // to limit the scope of the different msgs we use extra scope blocks here
     {
-        /*playerMessage msg;
+        serverMessage msg;
         // websocket: send current item
-        msg.action = playerMessage::WS_UPDATE_NOWPLAYING;
-        xQueueSend(playerQueue, &msg, portMAX_DELAY);
+        msg.type = serverMessage::WS_UPDATE_NOWPLAYING;
+        xQueueSend(serverQueue, &msg, portMAX_DELAY);
 
         // websocket: send program name and version
         snprintf(msg.str, sizeof(msg.str), "%s %s", PROGRAM_NAME, GIT_VERSION);
-        msg.action = playerMessage::WS_UPDATE_STATION;
-        xQueueSend(playerQueue, &msg, portMAX_DELAY);
+        msg.type = serverMessage::WS_UPDATE_STATION;
+        xQueueSend(serverQueue, &msg, portMAX_DELAY);
 
         // websocket: send radiobrowser link as streamtitle
         snprintf(msg.str, sizeof(msg.str), "%s", "Search API provided by: <a href=\"https://www.radio-browser.info/\" target=\"_blank\"><span style=\"white-space:nowrap;\">radio-browser.info</span></a>");
-        msg.action = playerMessage::WS_UPDATE_STREAMTITLE;
-        xQueueSend(playerQueue, &msg, portMAX_DELAY);*/
+        msg.type = serverMessage::WS_UPDATE_STREAMTITLE;
+        xQueueSend(serverQueue, &msg, portMAX_DELAY);
     }
 
     // clear tft and show system info
