@@ -43,7 +43,6 @@ void playerTask(void *parameter)
 
             case playerMessage::SET_VOLUME:
                 _playerVolume = msg.value > VS1053_MAXVOLUME ? VS1053_MAXVOLUME : msg.value;
-                // ws.printfAll("%s\n%i\n", VOLUME_HEADER, _playerVolume);
                 xSemaphoreTake(spiMutex, portMAX_DELAY);
                 audio.setVolume(_playerVolume);
                 xSemaphoreGive(spiMutex);
@@ -65,12 +64,24 @@ void playerTask(void *parameter)
                     xSemaphoreGive(spiMutex);
                 }
 
+                {
+                    serverMessage msg;
+                    msg.str[0] = 0;
+                    msg.type = serverMessage::WS_UPDATE_STREAMTITLE;
+                    xQueueSend(serverQueue, &msg, portMAX_DELAY);
+                }
+
                 /* keep trying until some stream starts or we reach the end of playlist */
                 while (playList.currentItem() < playList.size())
                 {
+                    if (!_paused && !msg.offset)
                     {
                         serverMessage msg;
                         msg.type = serverMessage::WS_UPDATE_NOWPLAYING;
+                        xQueueSend(serverQueue, &msg, portMAX_DELAY);
+
+                        msg.type = serverMessage::WS_UPDATE_STATION;
+                        snprintf(msg.str, sizeof(msg.str), "%s", playList.name(playList.currentItem()).c_str());
                         xQueueSend(serverQueue, &msg, portMAX_DELAY);
                     }
 
