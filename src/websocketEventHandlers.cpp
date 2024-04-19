@@ -23,6 +23,8 @@ void websocketEventHandler(AsyncWebSocket *server, AsyncWebSocketClient *client,
         xQueueSend(serverQueue, &msg, portMAX_DELAY);
         msg.type = serverMessage::WS_UPDATE_STATION;
         xQueueSend(serverQueue, &msg, portMAX_DELAY);
+        msg.type = serverMessage::WS_UPDATE_NOWPLAYING;
+        xQueueSend(serverQueue, &msg, portMAX_DELAY);        
         break;
     }
     case WS_EVT_DISCONNECT:
