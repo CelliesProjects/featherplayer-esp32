@@ -225,7 +225,7 @@ void serverTask(void *parameter)
     while (1)
     {
         static serverMessage msg{};
-        if (xQueueReceive(serverQueue, &msg, pdMS_TO_TICKS(500)) == pdTRUE)
+        if (xQueueReceive(serverQueue, &msg, portMAX_DELAY) == pdTRUE)
         {
             switch (msg.type)
             {
@@ -294,7 +294,6 @@ void serverTask(void *parameter)
                 }
                 playListItem item;
                 playList.get(playList.currentItem(), item);
-                // check the item type to show the tail end of url for real files
                 snprintf(buff, sizeof(buff), "showstation\n%s\n%s\n", msg.str, typeStr[item.type]);
                 ws.textAll(buff);
                 break;
