@@ -193,7 +193,6 @@ void audio_eof_stream(const char *info)
 void audio_showstreamtitle(const char *info)
 {
     log_i("STREAMTITLE: %s", info);
-
     {
         serverMessage msg;
         msg.type = serverMessage::WS_UPDATE_STREAMTITLE;
@@ -205,4 +204,14 @@ void audio_showstreamtitle(const char *info)
     msg.action = tftMessage::SHOW_TITLE;
     snprintf(msg.str, sizeof(msg.str), "%s", info);
     xQueueSend(tftQueue, &msg, portMAX_DELAY);
+}
+
+void audio_showstation(const char *info)
+{
+    log_i("STATION: %s", info);
+
+    serverMessage msg;
+    msg.type = serverMessage::WS_UPDATE_STATION;
+    snprintf(msg.str, sizeof(msg.str), "%s", info);
+    xQueueSend(serverQueue, &msg, portMAX_DELAY);    
 }
