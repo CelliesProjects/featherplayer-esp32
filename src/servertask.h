@@ -45,7 +45,7 @@ struct serverMessage
     type type;
     size_t value;
     size_t value2;
-    char str[64]{};
+    char str[160]{};
     bool singleClient = false;
 };
 
