@@ -542,18 +542,43 @@ void handleMultiFrame(AsyncWebSocketClient *client, uint8_t *data, size_t len, A
 
             if (!itemsAdded)
             {
+                serverMessage msg;
+                msg.type = serverMessage::WS_PASS_MESSAGE;
+                msg.singleClient = true;
+                msg.value = client->id();
+                snprintf(msg.str, sizeof(msg.str), "%s\nERROR: Could not add items to playlist", MESSAGE_HEADER);
+                xQueueSend(serverQueue, &msg, portMAX_DELAY);
+                return;                
             }
+
+            updatePlaylistOverWebSocket();
 
             if (itemsAdded < number_of_urls)
             {
+                serverMessage msg;
+                msg.type = serverMessage::WS_PASS_MESSAGE;
+                msg.singleClient = true;
+                msg.value = client->id();      
+                snprintf(msg.str, sizeof(msg.str), "%s\nERROR: Could only add %i of %i items", MESSAGE_HEADER, itemsAdded, number_of_urls);
+                xQueueSend(serverQueue, &msg, portMAX_DELAY);                          
             }
 
             if (itemsAdded == number_of_urls)
             {
+                serverMessage msg;
+                msg.type = serverMessage::WS_PASS_MESSAGE;
+                msg.singleClient = true;
+                msg.value = client->id();      
+                snprintf(msg.str, sizeof(msg.str), "%s\nAdded %i items to playlist", MESSAGE_HEADER, itemsAdded);
+                xQueueSend(serverQueue, &msg, portMAX_DELAY);                      
             }
 
             if (startnow || playList.currentItem() == PLAYLIST_STOPPED)
             {
+                playerMessage msg;
+                msg.action = playerMessage::START_ITEM;
+                msg.value = previousSize;
+                xQueueSend(playerQueue, &msg, portMAX_DELAY);                
             }
         }
         message.clear();
