@@ -43,6 +43,7 @@ void playerTask(void *parameter)
 
             case playerMessage::SET_VOLUME:
                 _playerVolume = msg.value > VS1053_MAXVOLUME ? VS1053_MAXVOLUME : msg.value;
+                // ws clients updaten!
                 xSemaphoreTake(spiMutex, portMAX_DELAY);
                 audio.setVolume(_playerVolume);
                 xSemaphoreGive(spiMutex);
@@ -69,6 +70,18 @@ void playerTask(void *parameter)
                     msg.str[0] = 0;
                     msg.type = serverMessage::WS_UPDATE_STREAMTITLE;
                     xQueueSend(serverQueue, &msg, portMAX_DELAY);
+                }
+
+                if (!_paused)
+                {
+                    tftMessage msg;
+                    msg.action = tftMessage::SHOW_TITLE; // send empty title to erase the scrollbar
+                    msg.str[0] = 0;
+                    xQueueSend(tftQueue, &msg, portMAX_DELAY);
+
+                    msg.action = tftMessage::SHOW_STATION;
+                    snprintf(msg.str, sizeof(msg.str), "%s", playList.name(playList.currentItem()).c_str());
+                    xQueueSend(tftQueue, &msg, portMAX_DELAY);
                 }
 
                 /* keep trying until some stream starts or we reach the end of playlist */
@@ -131,11 +144,19 @@ void playerTask(void *parameter)
         if (audio.size() && millis() - savedTime > UPDATE_INTERVAL_MS && audio.position() != _savedPosition)
         {
             log_d("Buffer status: %s", audio.bufferStatus());
-            serverMessage msg;
-            msg.type = serverMessage::WS_UPDATE_PROGRESS;
-            msg.value = audio.position();
+            {
+                serverMessage msg;
+                msg.type = serverMessage::WS_UPDATE_PROGRESS;
+                msg.value = audio.position();
+                msg.value2 = audio.size();
+                xQueueSend(serverQueue, &msg, portMAX_DELAY);
+            }
+            tftMessage msg;
+            msg.action = tftMessage::PROGRESS_BAR;
+            msg.value1 = audio.position();
             msg.value2 = audio.size();
-            xQueueSend(serverQueue, &msg, portMAX_DELAY);
+            xQueueSend(tftQueue, &msg, portMAX_DELAY);
+
             savedTime = millis();
             _savedPosition = audio.position();
         }

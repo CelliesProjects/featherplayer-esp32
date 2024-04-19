@@ -29,7 +29,7 @@ void tftTask(void *parameter)
     tft.setTextSize(1);
     tft.setCursor(2, 14);
     tft.setTextWrap(false);
-    tft.printf("tft started\n%s\n\n %s", (char*)PROGRAM_NAME, (char*)GIT_VERSION);
+    tft.printf("tft started\n%s\n\n %s", PROGRAM_NAME, GIT_VERSION);
     xSemaphoreGive(spiMutex);
 
     // setup tft backlight pwm
@@ -50,6 +50,7 @@ void tftTask(void *parameter)
 
     while (1)
     {
+        bool clearTitle = false;
         static tftMessage msg = {};
         if (xQueueReceive(tftQueue, &msg, pdTICKS_TO_MS(25)) == pdTRUE)
         {
@@ -70,7 +71,7 @@ void tftTask(void *parameter)
             case tftMessage::PROGRESS_BAR:
             {
                 const int HEIGHT_IN_PIXELS = 20;
-                const int HEIGHT_OFFSET = 64;
+                const int HEIGHT_OFFSET = 32;
                 const int16_t FILLED_AREA = map_range(msg.value1, 0, msg.value2, 0, tft.width() + 1);
                 xSemaphoreTake(spiMutex, portMAX_DELAY);
                 tft.fillRect(0, HEIGHT_OFFSET, FILLED_AREA, HEIGHT_IN_PIXELS, ST77XX_BLUE);
@@ -89,14 +90,18 @@ void tftTask(void *parameter)
                 tft.setTextSize(1);
                 tft.setTextColor(ST77XX_BLACK);
                 tft.setFont(&FreeSansBold9pt7b);
-                tft.setCursor(5, 34);
+                tft.setCursor(5, 16);
                 xSemaphoreTake(spiMutex, portMAX_DELAY);
                 tft.print(msg.str);
                 xSemaphoreGive(spiMutex);
                 break;
             case tftMessage::SHOW_TITLE:
                 if (msg.str[0] == 0)
+                {
+                    clearTitle = true;
+                    streamTitle[0] = 0;
                     break;
+                }
                 streamTitleOffset = 0;
                 snprintf(streamTitle, sizeof(streamTitle), "%s", msg.str);
                 tft.setTextSize(1);
@@ -143,7 +148,7 @@ void tftTask(void *parameter)
             }
         }
 
-        if (streamTitle[0])
+        if (streamTitle[0] || clearTitle)
         {
             const auto Y_POSITION = 64;
 
@@ -159,6 +164,7 @@ void tftTask(void *parameter)
             xSemaphoreGive(spiMutex);
 
             streamTitleOffset = (streamTitleOffset < (canvas.width() + strWidth)) ? streamTitleOffset + 2 : 0;
+            clearTitle = false;
         }
     }
 }
