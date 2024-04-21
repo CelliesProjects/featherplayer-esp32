@@ -31,6 +31,8 @@ void playerTask(void *parameter)
 
     playListEnd();
 
+    size_t _savedPosition = 0;
+
     log_i("Ready to rock!");
 
     while (1)

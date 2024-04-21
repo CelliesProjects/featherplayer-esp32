@@ -5,8 +5,6 @@
 #include <AsyncTCP.h>          /* use the esphome.io fork*/
 #include <ESPAsyncWebServer.h> /* use the esphome.io fork*/
 
-#include "playList.h"
-#include "servertask.h"
 #include "playertask.h"
 
 extern bool _paused;

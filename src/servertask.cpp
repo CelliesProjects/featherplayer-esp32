@@ -1,6 +1,5 @@
 #include "servertask.h"
 
-static const char *VOLUME_HEADER = "volume";
 static const char *HEADER_MODIFIED_SINCE = "If-Modified-Since";
 
 static inline __attribute__((always_inline)) bool htmlUnmodified(const AsyncWebServerRequest *request, const char *date)

@@ -6,7 +6,6 @@
 
 #include "servertask.h"
 #include "tfttask.h"
-#include "playList.h"
 
 #define VS1053_CS 6
 #define VS1053_DCS 10
@@ -16,7 +15,6 @@
 extern playList_t playList;
 extern SemaphoreHandle_t spiMutex;
 extern QueueHandle_t playerQueue;
-extern size_t _savedPosition;
 extern uint8_t _playerVolume;
 extern bool _paused;
 
