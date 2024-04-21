@@ -161,7 +161,7 @@ void setup()
         "serverTask",
         4000,
         NULL,
-        tskIDLE_PRIORITY + 1,
+        tskIDLE_PRIORITY + 5,
         NULL,
         APP_CPU_NUM);
 
@@ -192,7 +192,7 @@ void audio_eof_stream(const char *info)
 
 void audio_showstreamtitle(const char *info)
 {
-    log_i("STREAMTITLE: %s", info);
+    log_d("STREAMTITLE: %s", info);
     {
         serverMessage msg;
         msg.type = serverMessage::WS_UPDATE_STREAMTITLE;
@@ -208,7 +208,7 @@ void audio_showstreamtitle(const char *info)
 
 void audio_showstation(const char *info)
 {
-    log_i("STATION: %s", info);
+    log_d("STATION: %s", info);
 
     serverMessage msg;
     msg.type = serverMessage::WS_UPDATE_STATION;
