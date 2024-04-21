@@ -163,7 +163,7 @@ void setup()
         NULL,
         tskIDLE_PRIORITY + 1,
         NULL,
-        PRO_CPU_NUM);
+        APP_CPU_NUM);
 
     if (taskResult != pdPASS)
     {

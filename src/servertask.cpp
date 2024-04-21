@@ -225,7 +225,7 @@ void serverTask(void *parameter)
     while (1)
     {
         static serverMessage msg{};
-        if (xQueueReceive(serverQueue, &msg, portMAX_DELAY) == pdTRUE)
+        if (xQueueReceive(serverQueue, &msg, pdMS_TO_TICKS(1000)) == pdTRUE)
         {
             switch (msg.type)
             {

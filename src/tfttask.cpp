@@ -17,7 +17,7 @@ void tftTask(void *parameter)
     delay(10);
 
     // initialize the TFT
-    const auto BACKGROUND_COLOR = ST77XX_YELLOW;
+    static const auto BACKGROUND_COLOR = ST77XX_YELLOW;
 
     xSemaphoreTake(spiMutex, portMAX_DELAY);
     static Adafruit_ST7789 tft = Adafruit_ST7789(TFT_CS, TFT_DC, TFT_RST);
@@ -48,6 +48,8 @@ void tftTask(void *parameter)
     static char streamTitle[264];
     static int16_t streamTitleOffset = 0;
 
+    static const auto TOP_OF_SCROLLER = 76;
+
     while (1)
     {
         bool clearTitle = false;
@@ -71,7 +73,7 @@ void tftTask(void *parameter)
             case tftMessage::PROGRESS_BAR:
             {
                 const int HEIGHT_IN_PIXELS = 20;
-                const int HEIGHT_OFFSET = 32;
+                const int HEIGHT_OFFSET = 28;
                 const int16_t FILLED_AREA = map_range(msg.value1, 0, msg.value2, 0, tft.width() + 1);
                 xSemaphoreTake(spiMutex, portMAX_DELAY);
                 tft.fillRect(0, HEIGHT_OFFSET, FILLED_AREA, HEIGHT_IN_PIXELS, ST77XX_BLUE);
@@ -83,7 +85,8 @@ void tftTask(void *parameter)
                 streamTitle[0] = 0;
                 streamTitleOffset = 0;
                 xSemaphoreTake(spiMutex, portMAX_DELAY);
-                tft.fillScreen(BACKGROUND_COLOR);
+                // tft.fillScreen(BACKGROUND_COLOR);
+                tft.fillRect(0, 0, tft.width(), TOP_OF_SCROLLER, BACKGROUND_COLOR);
                 xSemaphoreGive(spiMutex);
                 break;
             case tftMessage::SHOW_STATION:
@@ -137,7 +140,7 @@ void tftTask(void *parameter)
                 static uint16_t height;
                 static uint16_t width;
                 tft.getTextBounds(WiFi.localIP().toString().c_str(), 0, 0, &xpos, &ypos, &width, &height);
-                tft.setCursor((tft.width() / 2) - (width / 2), tft.height() - (height / 2));
+                tft.setCursor((tft.width() / 2) - (width / 2), tft.height() - (height / 2) + 4);
                 xSemaphoreTake(spiMutex, portMAX_DELAY);
                 tft.print(WiFi.localIP().toString().c_str());
                 xSemaphoreGive(spiMutex);
@@ -150,8 +153,6 @@ void tftTask(void *parameter)
 
         if (streamTitle[0] || clearTitle)
         {
-            const auto Y_POSITION = 64;
-
             canvas.fillScreen(0);
             canvas.setCursor(canvas.width() - streamTitleOffset, canvas.height() - 6);
             canvas.setFont(&FreeSansBold9pt7b);
@@ -160,7 +161,7 @@ void tftTask(void *parameter)
             canvas.print(streamTitle);
 
             xSemaphoreTake(spiMutex, portMAX_DELAY);
-            tft.drawRGBBitmap(0, Y_POSITION, canvas.getBuffer(), canvas.width(), canvas.height());
+            tft.drawRGBBitmap(0, TOP_OF_SCROLLER, canvas.getBuffer(), canvas.width(), canvas.height());
             xSemaphoreGive(spiMutex);
 
             streamTitleOffset = (streamTitleOffset < (canvas.width() + strWidth)) ? streamTitleOffset + 2 : 0;

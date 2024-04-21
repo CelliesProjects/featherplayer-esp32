@@ -72,23 +72,24 @@ void playerTask(void *parameter)
                     xQueueSend(serverQueue, &msg, portMAX_DELAY);
                 }
 
-                if (!_paused)
-                {
-                    tftMessage msg;
-                    msg.action = tftMessage::SHOW_TITLE; // send empty title to erase the scrollbar
-                    msg.str[0] = 0;
-                    xQueueSend(tftQueue, &msg, portMAX_DELAY);
-
-                    msg.action = tftMessage::SHOW_STATION;
-                    snprintf(msg.str, sizeof(msg.str), "%s", playList.name(playList.currentItem()).c_str());
-                    xQueueSend(tftQueue, &msg, portMAX_DELAY);
-                }
-
                 /* keep trying until some stream starts or we reach the end of playlist */
                 while (playList.currentItem() < playList.size())
                 {
                     if (!_paused && !msg.offset)
                     {
+                        {
+                            tftMessage msg;
+                            msg.action = tftMessage::CLEAR_SCREEN;
+                            xQueueSend(tftQueue, &msg, portMAX_DELAY);
+
+                            msg.action = tftMessage::SHOW_STATION;
+                            snprintf(msg.str, sizeof(msg.str), "%s", playList.name(playList.currentItem()).c_str());
+                            xQueueSend(tftQueue, &msg, portMAX_DELAY);
+
+                            msg.action = tftMessage::SHOW_TITLE; // send empty title to erase the scrollbar
+                            msg.str[0] = 0;
+                            xQueueSend(tftQueue, &msg, portMAX_DELAY);
+                        }
                         serverMessage msg;
                         msg.type = serverMessage::WS_UPDATE_NOWPLAYING;
                         xQueueSend(serverQueue, &msg, portMAX_DELAY);
