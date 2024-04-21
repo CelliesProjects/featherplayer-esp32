@@ -15,6 +15,8 @@ void websocketEventHandler(AsyncWebSocket *server, AsyncWebSocketClient *client,
         msg.value = client->id();
         msg.type = serverMessage::WS_UPDATE_PLAYLIST;
         xQueueSend(serverQueue, &msg, portMAX_DELAY);
+        msg.type = serverMessage::WS_UPDATE_NOWPLAYING;
+        xQueueSend(serverQueue, &msg, portMAX_DELAY);              
         msg.type = serverMessage::WS_UPDATE_FAVORITES;
         xQueueSend(serverQueue, &msg, portMAX_DELAY);
         msg.type = serverMessage::WS_UPDATE_VOLUME;
@@ -22,9 +24,7 @@ void websocketEventHandler(AsyncWebSocket *server, AsyncWebSocketClient *client,
         msg.type = serverMessage::WS_UPDATE_STREAMTITLE;
         xQueueSend(serverQueue, &msg, portMAX_DELAY);
         msg.type = serverMessage::WS_UPDATE_STATION;
-        xQueueSend(serverQueue, &msg, portMAX_DELAY);
-        msg.type = serverMessage::WS_UPDATE_NOWPLAYING;
-        xQueueSend(serverQueue, &msg, portMAX_DELAY);        
+        xQueueSend(serverQueue, &msg, portMAX_DELAY);  
         break;
     }
     case WS_EVT_DISCONNECT:
