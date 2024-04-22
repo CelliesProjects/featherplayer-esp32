@@ -1,21 +1,6 @@
 
 #include "playertask.h"
 
-void updateTFT()
-{
-    /*
-    tftMessage msg;
-    playListItem item;
-
-    msg.action = tftMessage::CLEAR_SCREEN;
-    xQueueSend(tftQueue, &msg, portMAX_DELAY);
-
-    msg.action = tftMessage::SHOW_STATION;
-    snprintf(msg.str, sizeof(msg.str), "%s", playList.name(playList.currentItem()).c_str());
-    xQueueSend(tftQueue, &msg, portMAX_DELAY);
-    */
-}
-
 void playerTask(void *parameter)
 {
     static ESP32_VS1053_Stream audio;
@@ -31,7 +16,7 @@ void playerTask(void *parameter)
 
     playListEnd();
 
-    size_t _savedPosition = 0;
+    static size_t _savedPosition = 0;
 
     log_i("Ready to rock!");
 
@@ -70,8 +55,15 @@ void playerTask(void *parameter)
                 {
                     serverMessage msg;
                     msg.str[0] = 0;
-                    msg.type = serverMessage::WS_UPDATE_STREAMTITLE;
+                    msg.type = serverMessage::WS_UPDATE_STREAMTITLE; // send empty title to websocket clients
                     xQueueSend(serverQueue, &msg, portMAX_DELAY);
+                }
+
+                {
+                    tftMessage msg;
+                    msg.str[0] = 0;
+                    msg.action = tftMessage::SHOW_TITLE; // send empty title to tft to erase the scrollbar
+                    xQueueSend(tftQueue, &msg, portMAX_DELAY);
                 }
 
                 /* keep trying until some stream starts or we reach the end of playlist */
@@ -86,10 +78,6 @@ void playerTask(void *parameter)
 
                             msg.action = tftMessage::SHOW_STATION;
                             snprintf(msg.str, sizeof(msg.str), "%s", playList.name(playList.currentItem()).c_str());
-                            xQueueSend(tftQueue, &msg, portMAX_DELAY);
-
-                            msg.action = tftMessage::SHOW_TITLE; // send empty title to erase the scrollbar
-                            msg.str[0] = 0;
                             xQueueSend(tftQueue, &msg, portMAX_DELAY);
                         }
                         serverMessage msg;
@@ -113,12 +101,18 @@ void playerTask(void *parameter)
                 }
 
                 if (audio.isRunning() && !_paused && !msg.offset)
-                    updateTFT();
+                {
+                    tftMessage msg;
+                    msg.action = tftMessage::SHOW_CODEC;
+                    if (audio.bitrate())
+                        snprintf(msg.str, sizeof(msg.str), "%s %i kbps", audio.currentCodec(), audio.bitrate());
+                    else
+                        snprintf(msg.str, sizeof(msg.str), "%s", audio.currentCodec());
+                    xQueueSend(tftQueue, &msg, portMAX_DELAY);
+                }
 
                 if (!audio.isRunning())
                     playListEnd();
-
-                _paused = false;
                 break;
 
             case playerMessage::PAUSE:
@@ -144,7 +138,7 @@ void playerTask(void *parameter)
         constexpr const auto UPDATE_INTERVAL_MS = 1000 / MAX_UPDATE_FREQ_HZ;
         static unsigned long savedTime = millis();
 
-        if (audio.size() && millis() - savedTime > UPDATE_INTERVAL_MS && audio.position() != _savedPosition)
+        if (audio.size() && millis() - savedTime > UPDATE_INTERVAL_MS)
         {
             log_d("Buffer status: %s", audio.bufferStatus());
             {
@@ -161,7 +155,6 @@ void playerTask(void *parameter)
             xQueueSend(tftQueue, &msg, portMAX_DELAY);
 
             savedTime = millis();
-            _savedPosition = audio.position();
         }
 
         if (audio.isRunning())

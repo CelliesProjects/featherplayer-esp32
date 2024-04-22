@@ -14,22 +14,24 @@ void tftTask(void *parameter)
     // turn on the TFT / I2C power supply
     pinMode(TFT_I2C_POWER, OUTPUT);
     digitalWrite(TFT_I2C_POWER, HIGH);
-    delay(10);
+    delay(5);
+
+    //static const auto BACKGROUND_COLOR = ST77XX_YELLOW;
+    static const auto BACKGROUND_COLOR = 0x18e3; // 8 bit value = #1c1c1c dark grey
+    static const auto TEXT_COLOR = 0xf79b; // 8 bit value = #f5f4e2 yellowish
 
     // initialize the TFT
-    static const auto BACKGROUND_COLOR = ST77XX_YELLOW;
-
     xSemaphoreTake(spiMutex, portMAX_DELAY);
     static Adafruit_ST7789 tft = Adafruit_ST7789(TFT_CS, TFT_DC, TFT_RST);
     tft.init(135, 240, SPI_MODE0);
     tft.setRotation(1);
     tft.setFont(&FreeSansBold9pt7b);
     tft.fillScreen(BACKGROUND_COLOR);
-    tft.setTextColor(ST77XX_BLACK, BACKGROUND_COLOR);
+    tft.setTextColor(TEXT_COLOR, BACKGROUND_COLOR);
     tft.setTextSize(1);
     tft.setCursor(2, 14);
     tft.setTextWrap(false);
-    tft.printf("tft started\n%s\n\n %s", PROGRAM_NAME, GIT_VERSION);
+    tft.printf("%s %s", PROGRAM_NAME, GIT_VERSION);
     xSemaphoreGive(spiMutex);
 
     // setup tft backlight pwm
@@ -40,7 +42,6 @@ void tftTask(void *parameter)
     ledcAttachPin(TFT_BACKLITE, LEDC_CHANNEL);
     ledcWrite(LEDC_CHANNEL, LEDC_MAX_PWM_VALUE >> (SOC_LEDC_TIMER_BIT_WIDE_NUM / 3));
 
-    // setup stuff for the main loop
     static GFXcanvas16 canvas(tft.width(), 20);
     static int16_t strX, strY;
     static uint16_t strWidth, strHeight;
@@ -85,15 +86,14 @@ void tftTask(void *parameter)
                 streamTitle[0] = 0;
                 streamTitleOffset = 0;
                 xSemaphoreTake(spiMutex, portMAX_DELAY);
-                // tft.fillScreen(BACKGROUND_COLOR);
                 tft.fillRect(0, 0, tft.width(), TOP_OF_SCROLLER, BACKGROUND_COLOR);
                 xSemaphoreGive(spiMutex);
                 break;
             case tftMessage::SHOW_STATION:
                 tft.setTextSize(1);
-                tft.setTextColor(ST77XX_BLACK);
+                tft.setTextColor(TEXT_COLOR);
                 tft.setFont(&FreeSansBold9pt7b);
-                tft.setCursor(5, 16);
+                tft.setCursor(5, 20);
                 xSemaphoreTake(spiMutex, portMAX_DELAY);
                 tft.print(msg.str);
                 xSemaphoreGive(spiMutex);
@@ -111,21 +111,11 @@ void tftTask(void *parameter)
                 tft.setFont(&FreeSansBold9pt7b);
                 tft.getTextBounds(streamTitle, 0, 0, &strX, &strY, &strWidth, &strHeight);
                 break;
-            case tftMessage::SHOW_BITRATE:
-                tft.setTextSize(1);
-                tft.setTextColor(ST77XX_BLACK);
-                tft.setFont(&FreeSansBold9pt7b);
-                tft.setCursor(5, 56);
-                xSemaphoreTake(spiMutex, portMAX_DELAY);
-                tft.print(msg.value1);
-                tft.print(" kbps");
-                xSemaphoreGive(spiMutex);
-                break;
             case tftMessage::SHOW_CODEC:
                 tft.setTextSize(1);
-                tft.setTextColor(ST77XX_BLACK);
+                tft.setTextColor(TEXT_COLOR);
                 tft.setFont(&FreeSansBold9pt7b);
-                tft.setCursor(85, 56);
+                tft.setCursor(5, 66);
                 xSemaphoreTake(spiMutex, portMAX_DELAY);
                 tft.print(msg.str);
                 xSemaphoreGive(spiMutex);
@@ -134,7 +124,7 @@ void tftTask(void *parameter)
             {
                 tft.setFont(&FreeSansBold18pt7b);
                 tft.setTextSize(1);
-                tft.setTextColor(ST77XX_BLACK);
+                tft.setTextColor(TEXT_COLOR);
                 static int16_t xpos;
                 static int16_t ypos;
                 static uint16_t height;

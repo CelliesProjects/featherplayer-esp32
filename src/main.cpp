@@ -128,14 +128,7 @@ void setup()
     WiFi.setSleep(false);
     while (!WiFi.isConnected())
         delay(10);
-    /*
-        {
-            tftMessage msg;
-            msg.action = tftMessage::SYSTEM_MESSAGE;
-            snprintf(msg.str, sizeof(msg.str), "WiFi OK - %s", WiFi.localIP().toString().c_str());
-            xQueueSend(tftQueue, &msg, portMAX_DELAY);
-        }
-    */
+
     taskResult = xTaskCreatePinnedToCore(
         playerTask,
         "playerTask",

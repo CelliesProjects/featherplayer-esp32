@@ -26,7 +26,6 @@ struct tftMessage
         CLEAR_SCREEN,
         SHOW_STATION,
         SHOW_TITLE,
-        SHOW_BITRATE,
         SHOW_CODEC,
         SHOW_IPADDRESS
     };
