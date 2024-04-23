@@ -43,7 +43,7 @@ void setup()
             delay(100);
     }
 
-    tftQueue = xQueueCreate(2, sizeof(struct tftMessage));
+    tftQueue = xQueueCreate(1, sizeof(struct tftMessage));
     if (!tftQueue)
     {
         log_e("FATAL error! could not create display queue. System HALTED!");
@@ -51,7 +51,7 @@ void setup()
             delay(100);
     }
 
-    playerQueue = xQueueCreate(2, sizeof(struct playerMessage));
+    playerQueue = xQueueCreate(1, sizeof(struct playerMessage));
     if (!playerQueue)
     {
         log_e("FATAL error! could not create player queue. System HALTED!");
@@ -59,7 +59,7 @@ void setup()
             delay(100);
     }
 
-    serverQueue = xQueueCreate(2, sizeof(struct serverMessage));
+    serverQueue = xQueueCreate(3, sizeof(struct serverMessage));
     if (!serverQueue)
     {
         log_e("FATAL error! could not create server queue. System HALTED!");
