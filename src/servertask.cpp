@@ -243,10 +243,12 @@ void serverTask(void *parameter)
             }
 
             case serverMessage::WS_PASS_MESSAGE:
+                char buff[256];
+                snprintf(buff, sizeof(buff), "message\n%s", msg.str);
                 if (msg.singleClient)
-                    ws.text(msg.value, msg.str);
+                    ws.text(msg.value, buff);
                 else
-                    ws.textAll(msg.str);
+                    ws.textAll(buff);
                 break;
 
             case serverMessage::WS_UPDATE_FAVORITES:
@@ -300,7 +302,7 @@ void serverTask(void *parameter)
 
             case serverMessage::WS_UPDATE_PROGRESS:
             {
-                char buff[32];
+                char buff[48];
                 snprintf(buff, sizeof(buff), "progress\n%i\n%i\n", msg.value, msg.value2);
                 ws.textAll(buff);
                 break;
@@ -309,8 +311,6 @@ void serverTask(void *parameter)
                 log_w("unhandled player message with number %i", msg.type);
             }
         }
-
         ws.cleanupClients();
-        ws._cleanBuffers();
     }
 }
