@@ -1,8 +1,6 @@
 
 #include "websocketEventHandler.h"
 
-const char *MESSAGE_HEADER = "message";
-
 void websocketEventHandler(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len)
 {
     switch (type)
@@ -16,7 +14,7 @@ void websocketEventHandler(AsyncWebSocket *server, AsyncWebSocketClient *client,
         msg.type = serverMessage::WS_UPDATE_PLAYLIST;
         xQueueSend(serverQueue, &msg, portMAX_DELAY);
         msg.type = serverMessage::WS_UPDATE_NOWPLAYING;
-        xQueueSend(serverQueue, &msg, portMAX_DELAY);              
+        xQueueSend(serverQueue, &msg, portMAX_DELAY);
         msg.type = serverMessage::WS_UPDATE_FAVORITES;
         xQueueSend(serverQueue, &msg, portMAX_DELAY);
         msg.type = serverMessage::WS_UPDATE_VOLUME;
@@ -24,7 +22,7 @@ void websocketEventHandler(AsyncWebSocket *server, AsyncWebSocketClient *client,
         msg.type = serverMessage::WS_UPDATE_STREAMTITLE;
         xQueueSend(serverQueue, &msg, portMAX_DELAY);
         msg.type = serverMessage::WS_UPDATE_STATION;
-        xQueueSend(serverQueue, &msg, portMAX_DELAY);  
+        xQueueSend(serverQueue, &msg, portMAX_DELAY);
         break;
     }
     case WS_EVT_DISCONNECT:
@@ -73,7 +71,7 @@ static void handleFavoriteToPlaylist(AsyncWebSocketClient *client, const char *f
         msg.type = serverMessage::WS_PASS_MESSAGE;
         msg.singleClient = true;
         msg.value = client->id();
-        snprintf(msg.str, sizeof(msg.str), "message\nERROR: Could not add '%s' to playlist", filename);
+        snprintf(msg.str, sizeof(msg.str), "ERROR: Could not add '%s' to playlist", filename);
         xQueueSend(serverQueue, &msg, portMAX_DELAY);
         return;
     }
@@ -87,7 +85,7 @@ static void handleFavoriteToPlaylist(AsyncWebSocketClient *client, const char *f
         msg.type = serverMessage::WS_PASS_MESSAGE;
         msg.singleClient = true;
         msg.value = client->id();
-        snprintf(msg.str, sizeof(msg.str), "message\nERROR: Could not add '%s' to playlist", filename);
+        snprintf(msg.str, sizeof(msg.str), "ERROR: Could not add '%s' to playlist", filename);
         xQueueSend(serverQueue, &msg, portMAX_DELAY);
         return;
     }
@@ -143,7 +141,7 @@ static bool saveItemToFavorites(AsyncWebSocketClient *client, const char *filena
             serverMessage msg;
             msg.singleClient = true;
             msg.value = client->id();
-            snprintf(msg.str, sizeof(msg.str), "%s\nERROR: Could not open '%s' for writing!", MESSAGE_HEADER, filename);
+            snprintf(msg.str, sizeof(msg.str), "ERROR: Could not open '%s' for writing!", filename);
             xQueueSend(serverQueue, &msg, portMAX_DELAY);
             return false;
         }
@@ -156,13 +154,13 @@ static bool saveItemToFavorites(AsyncWebSocketClient *client, const char *filena
             log_e("ERROR! Saving '%s' failed - disk full?", filename);
             serverMessage msg;
             msg.type = serverMessage::WS_PASS_MESSAGE;
-            snprintf(msg.str, sizeof(msg.str), "%s\nERROR: Could not completely save '%s' to favorites!", MESSAGE_HEADER, filename);
+            snprintf(msg.str, sizeof(msg.str), "ERROR: Could not completely save '%s' to favorites!", filename);
             xQueueSend(serverQueue, &msg, portMAX_DELAY);
             return false;
         }
         serverMessage msg;
         msg.type = serverMessage::WS_PASS_MESSAGE;
-        snprintf(msg.str, sizeof(msg.str), "%s\nSaved '%s' to favorites!", MESSAGE_HEADER, filename);
+        snprintf(msg.str, sizeof(msg.str), "Saved '%s' to favorites!", filename);
         xQueueSend(serverQueue, &msg, portMAX_DELAY);
         return true;
     }
@@ -263,7 +261,7 @@ void handleSingleFrame(AsyncWebSocketClient *client, uint8_t *data, size_t len)
             msg.type = serverMessage::WS_PASS_MESSAGE;
             msg.singleClient = true;
             msg.value = client->id();
-            snprintf(msg.str, sizeof(msg.str), "message\nAdded %i items to playlist", itemsAdded);
+            snprintf(msg.str, sizeof(msg.str), "Added %i items to playlist", itemsAdded);
             xQueueSend(serverQueue, &msg, portMAX_DELAY);
         }
 
@@ -368,7 +366,7 @@ void handleSingleFrame(AsyncWebSocketClient *client, uint8_t *data, size_t len)
             msg.type = serverMessage::WS_PASS_MESSAGE;
             msg.singleClient = true;
             msg.value = client->id();
-            snprintf(msg.str, sizeof(msg.str), "message\nERROR: Could not add '%s' to playlist", preset[index].name.c_str());
+            snprintf(msg.str, sizeof(msg.str), "ERROR: Could not add '%s' to playlist", preset[index].name.c_str());
             xQueueSend(serverQueue, &msg, portMAX_DELAY);
             return;
         }
@@ -411,6 +409,13 @@ void handleSingleFrame(AsyncWebSocketClient *client, uint8_t *data, size_t len)
             msg.type = serverMessage::WS_UPDATE_FAVORITES;
             xQueueSend(serverQueue, &msg, portMAX_DELAY);
         }
+        else
+        {
+            serverMessage msg;
+            msg.type = serverMessage::WS_PASS_MESSAGE;
+            snprintf(msg.str, sizeof(msg.str), "ERROR: Could not add '%s' to playlist!", pch);
+            xQueueSend(serverQueue, &msg, portMAX_DELAY);
+        }
     }
 
     else if (!strcmp("favoritetoplaylist", pch) || !strcmp("_favoritetoplaylist", pch))
@@ -426,7 +431,7 @@ void handleSingleFrame(AsyncWebSocketClient *client, uint8_t *data, size_t len)
             msg.type = serverMessage::WS_PASS_MESSAGE;
             msg.singleClient = true;
             msg.value = client->id();
-            snprintf(msg.str, sizeof(msg.str), "message\nERROR: Could not add '%s' to playlist!", pch);
+            snprintf(msg.str, sizeof(msg.str), "ERROR: Could not add '%s' to playlist!", pch);
             xQueueSend(serverQueue, &msg, portMAX_DELAY);
             return;
         }
@@ -449,7 +454,7 @@ void handleSingleFrame(AsyncWebSocketClient *client, uint8_t *data, size_t len)
             msg.type = serverMessage::WS_PASS_MESSAGE;
             msg.singleClient = true;
             msg.value = client->id();
-            snprintf(msg.str, sizeof(msg.str), "%s\nERROR: Could not delete %s", MESSAGE_HEADER, pch);
+            snprintf(msg.str, sizeof(msg.str), "ERROR: Could not delete %s", pch);
             xQueueSend(serverQueue, &msg, portMAX_DELAY);
         }
         else
@@ -468,7 +473,7 @@ void handleSingleFrame(AsyncWebSocketClient *client, uint8_t *data, size_t len)
             msg.type = serverMessage::WS_PASS_MESSAGE;
             msg.singleClient = true;
             msg.value = client->id();
-            snprintf(msg.str, sizeof(msg.str), "%s\nERROR: Could not add new url to playlist", MESSAGE_HEADER);
+            snprintf(msg.str, sizeof(msg.str), "ERROR: Could not add new url to playlist");
             xQueueSend(serverQueue, &msg, portMAX_DELAY);
             return;
         }
@@ -485,7 +490,7 @@ void handleSingleFrame(AsyncWebSocketClient *client, uint8_t *data, size_t len)
         msg.type = serverMessage::WS_PASS_MESSAGE;
         msg.singleClient = true;
         msg.value = client->id();
-        snprintf(msg.str, sizeof(msg.str), "%s\nAdded '%s' to playlist", MESSAGE_HEADER, name);
+        snprintf(msg.str, sizeof(msg.str), "Added '%s' to playlist", name);
         xQueueSend(serverQueue, &msg, portMAX_DELAY);
 
         msg.singleClient = false;
@@ -552,9 +557,9 @@ void handleMultiFrame(AsyncWebSocketClient *client, uint8_t *data, size_t len, A
                 msg.type = serverMessage::WS_PASS_MESSAGE;
                 msg.singleClient = true;
                 msg.value = client->id();
-                snprintf(msg.str, sizeof(msg.str), "%s\nERROR: Could not add items to playlist", MESSAGE_HEADER);
+                snprintf(msg.str, sizeof(msg.str), "ERROR: Could not add items to playlist");
                 xQueueSend(serverQueue, &msg, portMAX_DELAY);
-                return;                
+                return;
             }
 
             updatePlaylistOverWebSocket();
@@ -564,9 +569,9 @@ void handleMultiFrame(AsyncWebSocketClient *client, uint8_t *data, size_t len, A
                 serverMessage msg;
                 msg.type = serverMessage::WS_PASS_MESSAGE;
                 msg.singleClient = true;
-                msg.value = client->id();      
-                snprintf(msg.str, sizeof(msg.str), "%s\nERROR: Could only add %i of %i items", MESSAGE_HEADER, itemsAdded, number_of_urls);
-                xQueueSend(serverQueue, &msg, portMAX_DELAY);                          
+                msg.value = client->id();
+                snprintf(msg.str, sizeof(msg.str), "ERROR: Could only add %i of %i items", itemsAdded, number_of_urls);
+                xQueueSend(serverQueue, &msg, portMAX_DELAY);
             }
 
             if (itemsAdded == number_of_urls)
@@ -574,9 +579,9 @@ void handleMultiFrame(AsyncWebSocketClient *client, uint8_t *data, size_t len, A
                 serverMessage msg;
                 msg.type = serverMessage::WS_PASS_MESSAGE;
                 msg.singleClient = true;
-                msg.value = client->id();      
-                snprintf(msg.str, sizeof(msg.str), "%s\nAdded %i items to playlist", MESSAGE_HEADER, itemsAdded);
-                xQueueSend(serverQueue, &msg, portMAX_DELAY);                      
+                msg.value = client->id();
+                snprintf(msg.str, sizeof(msg.str), "Added %i items to playlist", itemsAdded);
+                xQueueSend(serverQueue, &msg, portMAX_DELAY);
             }
 
             if (startnow || playList.currentItem() == PLAYLIST_STOPPED)
@@ -584,7 +589,7 @@ void handleMultiFrame(AsyncWebSocketClient *client, uint8_t *data, size_t len, A
                 playerMessage msg;
                 msg.action = playerMessage::START_ITEM;
                 msg.value = previousSize;
-                xQueueSend(playerQueue, &msg, portMAX_DELAY);                
+                xQueueSend(playerQueue, &msg, portMAX_DELAY);
             }
         }
         message.clear();
