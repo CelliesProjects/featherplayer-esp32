@@ -19,7 +19,7 @@ enum streamType
     TYPE_ERROR
 };
 
-static const char *typeStr[] = {"FILE", "FOUND", "FAVO", "PRESET"};
+/*[[maybe_unused]]*/ static const char *typeStr[] = {"FILE", "FOUND", "FAVO", "PRESET", "ERROR"};
 
 struct playListItem
 {
@@ -38,7 +38,7 @@ public:
     ~playList_t()
     {
         clear();
-    }    
+    }
 
     int size()
     {

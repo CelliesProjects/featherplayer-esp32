@@ -16,7 +16,7 @@ void playerTask(void *parameter)
 
     playListEnd();
 
-    static size_t _savedPosition = 0;
+    [[maybe_unused]] static size_t _savedPosition = 0;
 
     log_i("Ready to rock!");
 
