@@ -30,7 +30,12 @@ void playerTask(void *parameter)
 
             case playerMessage::SET_VOLUME:
                 _playerVolume = msg.value > VS1053_MAXVOLUME ? VS1053_MAXVOLUME : msg.value;
-                // ws clients updaten!
+                {
+                    serverMessage msg;
+                    msg.type = serverMessage::WS_UPDATE_VOLUME;
+                    msg.value = _playerVolume;
+                    xQueueSend(serverQueue, &msg, portMAX_DELAY);
+                }
                 xSemaphoreTake(spiMutex, portMAX_DELAY);
                 audio.setVolume(_playerVolume);
                 xSemaphoreGive(spiMutex);
@@ -110,6 +115,8 @@ void playerTask(void *parameter)
                         snprintf(msg.str, sizeof(msg.str), "%s", audio.currentCodec());
                     xQueueSend(tftQueue, &msg, portMAX_DELAY);
                 }
+                
+                _paused = false;
 
                 if (!audio.isRunning())
                     playListEnd();
