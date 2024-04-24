@@ -224,7 +224,7 @@ void serverTask(void *parameter)
     while (1)
     {
         static serverMessage msg{};
-        if (xQueueReceive(serverQueue, &msg, portMAX_DELAY) == pdTRUE)
+        if (xQueueReceive(serverQueue, &msg, 0) == pdTRUE)
         {
             switch (msg.type)
             {
@@ -310,7 +310,9 @@ void serverTask(void *parameter)
             default:
                 log_w("unhandled player message with number %i", msg.type);
             }
+            ws.cleanupClients();
         }
-        ws.cleanupClients();
+        else
+            vTaskDelay(pdTICKS_TO_MS(1));
     }
 }
