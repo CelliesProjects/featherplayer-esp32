@@ -1,4 +1,3 @@
-
 #include "playertask.h"
 
 void playerTask(void *parameter)
@@ -110,12 +109,12 @@ void playerTask(void *parameter)
                     tftMessage msg;
                     msg.action = tftMessage::SHOW_CODEC;
                     if (audio.bitrate())
-                        snprintf(msg.str, sizeof(msg.str), "%s %i kbps", audio.currentCodec(), audio.bitrate());
+                        snprintf(msg.str, sizeof(msg.str), "%s %u kbps", audio.currentCodec(), audio.bitrate());
                     else
                         snprintf(msg.str, sizeof(msg.str), "%s", audio.currentCodec());
                     xQueueSend(tftQueue, &msg, portMAX_DELAY);
                 }
-                
+
                 _paused = false;
 
                 if (!audio.isRunning())
