@@ -261,7 +261,7 @@ void handleSingleFrame(AsyncWebSocketClient *client, uint8_t *data, size_t len)
             msg.type = serverMessage::WS_PASS_MESSAGE;
             msg.singleClient = true;
             msg.value = client->id();
-            snprintf(msg.str, sizeof(msg.str), "Added %i items to playlist", itemsAdded);
+            snprintf(msg.str, sizeof(msg.str), "Added %u items to playlist", itemsAdded);
             xQueueSend(serverQueue, &msg, portMAX_DELAY);
         }
 
@@ -570,7 +570,7 @@ void handleMultiFrame(AsyncWebSocketClient *client, uint8_t *data, size_t len, A
                 msg.type = serverMessage::WS_PASS_MESSAGE;
                 msg.singleClient = true;
                 msg.value = client->id();
-                snprintf(msg.str, sizeof(msg.str), "ERROR: Could only add %i of %i items", itemsAdded, number_of_urls);
+                snprintf(msg.str, sizeof(msg.str), "ERROR: Could only add %u of %i items", itemsAdded, number_of_urls);
                 xQueueSend(serverQueue, &msg, portMAX_DELAY);
             }
 
@@ -580,7 +580,7 @@ void handleMultiFrame(AsyncWebSocketClient *client, uint8_t *data, size_t len, A
                 msg.type = serverMessage::WS_PASS_MESSAGE;
                 msg.singleClient = true;
                 msg.value = client->id();
-                snprintf(msg.str, sizeof(msg.str), "Added %i items to playlist", itemsAdded);
+                snprintf(msg.str, sizeof(msg.str), "Added %u items to playlist", itemsAdded);
                 xQueueSend(serverQueue, &msg, portMAX_DELAY);
             }
 
