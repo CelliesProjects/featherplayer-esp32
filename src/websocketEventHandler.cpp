@@ -7,7 +7,7 @@ void websocketEventHandler(AsyncWebSocket *server, AsyncWebSocketClient *client,
     {
     case WS_EVT_CONNECT:
     {
-        log_i("client %i connected on %s", client->id(), server->url());
+        log_d("client %i connected on %s", client->id(), server->url());
         serverMessage msg;
         msg.singleClient = true;
         msg.value = client->id();
@@ -26,13 +26,13 @@ void websocketEventHandler(AsyncWebSocket *server, AsyncWebSocketClient *client,
         break;
     }
     case WS_EVT_DISCONNECT:
-        log_i("client %i disconnected from %s", client->id(), server->url());
+        log_d("client %i disconnected from %s", client->id(), server->url());
         break;
     case WS_EVT_ERROR:
         log_e("ws error");
         break;
     case WS_EVT_PONG:
-        log_i("ws pong");
+        log_d("ws pong");
         break;
     case WS_EVT_DATA:
     {
@@ -47,7 +47,7 @@ void websocketEventHandler(AsyncWebSocket *server, AsyncWebSocketClient *client,
         break;
     }
     default:
-        log_i("unhandled ws event!");
+        log_w("unhandled ws event!");
     }
 
     log_d("Heap: %d Free: ", ESP.getHeapSize(), ESP.getFreeHeap());
@@ -250,7 +250,7 @@ void handleSingleFrame(AsyncWebSocketClient *client, uint8_t *data, size_t len)
             pch = strtok(NULL, "\n");
         }
         const uint32_t itemsAdded{playList.size() - previousSize};
-        log_i("Added %i library items to playlist", itemsAdded);
+        log_d("Added %i library items to playlist", itemsAdded);
 
         if (!itemsAdded)
             return;
@@ -509,7 +509,7 @@ void handleSingleFrame(AsyncWebSocketClient *client, uint8_t *data, size_t len)
 
     else
     {
-        log_i("unhandled single frame ws event! %s", pch);
+        log_w("unhandled single frame ws event! %s", pch);
     }
 }
 
