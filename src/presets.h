@@ -17,6 +17,7 @@ const struct source preset[]{
     {"538 Dance Department", "http://playerservices.streamtheworld.com/api/livestream-redirect/TLPSTR01.mp3"},
     {"Absoluut FM", "http://absoluutfm.stream.laut.fm/absoluutfm"},
     {"Amsterdam Funk Channel", "http://stream.afc.fm:8504/stream"},
+    {"Radio Gelderland", "http://d2od87akyl46nm.cloudfront.net/icecast/omroepgelderland/radiogelderland"},
     {"Jazz Radio Funk", "http://jazz-wr06.ice.infomaniak.ch/jazz-wr06-128.mp3"},
     {"Radio 10 Disco Classics", "http://19993.live.streamtheworld.com/RADIO10.mp3"},
     {"Sublime Soul", "http://playerservices.streamtheworld.com/api/livestream-redirect/SUBLIMESOUL.mp3"},
@@ -30,6 +31,6 @@ const struct source preset[]{
     {"BollyHits Radio", "http://hoth.alonhosting.com:1080/stream/1/"},
 };
 
-const uint8_t NUMBER_OF_PRESETS = sizeof(preset) / sizeof(source);
+const uint8_t NUMBER_OF_PRESETS = sizeof(preset) / sizeof(source);      
 
 #endif
