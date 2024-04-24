@@ -6,7 +6,6 @@
 #include "websocketEventHandler.h"
 #include "icons.h"
 #include "percentEncode.h"
-
 #include "WiFiCredentials.h"
 
 const char *PROGRAM_NAME = "featherplayer-esp32";
@@ -148,7 +147,7 @@ void setup()
         "serverTask",
         4000,
         NULL,
-        tskIDLE_PRIORITY + 6,
+        tskIDLE_PRIORITY + 8,
         NULL);
 
     if (taskResult != pdPASS)
@@ -165,15 +164,10 @@ void loop() {}
 
 void audio_eof_stream(const char *info)
 {
-    if (playList.currentItem() < playList.size() - 1)
-    {
-        playerMessage msg;
-        msg.action = playerMessage::START_ITEM;
-        msg.value = playList.currentItem() + 1;
-        xQueueSend(playerQueue, &msg, portMAX_DELAY);
-        return;
-    }
-    playListEnd();
+    playerMessage msg;
+    msg.action = playerMessage::START_ITEM;
+    msg.value = playList.currentItem() + 1;
+    xQueueSend(playerQueue, &msg, portMAX_DELAY);
 }
 
 void audio_showstreamtitle(const char *info)
