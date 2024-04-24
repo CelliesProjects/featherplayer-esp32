@@ -43,7 +43,7 @@ void setup()
             delay(100);
     }
 
-    tftQueue = xQueueCreate(1, sizeof(struct tftMessage));
+    tftQueue = xQueueCreate(2, sizeof(struct tftMessage));
     if (!tftQueue)
     {
         log_e("FATAL error! could not create display queue. System HALTED!");
@@ -51,7 +51,7 @@ void setup()
             delay(100);
     }
 
-    playerQueue = xQueueCreate(1, sizeof(struct playerMessage));
+    playerQueue = xQueueCreate(2, sizeof(struct playerMessage));
     if (!playerQueue)
     {
         log_e("FATAL error! could not create player queue. System HALTED!");
@@ -59,7 +59,7 @@ void setup()
             delay(100);
     }
 
-    serverQueue = xQueueCreate(3, sizeof(struct serverMessage));
+    serverQueue = xQueueCreate(5, sizeof(struct serverMessage));
     if (!serverQueue)
     {
         log_e("FATAL error! could not create server queue. System HALTED!");
@@ -67,14 +67,13 @@ void setup()
             delay(100);
     }
 
-    BaseType_t taskResult = xTaskCreatePinnedToCore(
+    BaseType_t taskResult = xTaskCreate(
         tftTask,
         "tftTask",
         2700,
         NULL,
-        ((tskIDLE_PRIORITY + 2) | portPRIVILEGE_BIT),
-        NULL,
-        APP_CPU_NUM);
+        tskIDLE_PRIORITY + 2,
+        NULL);
 
     if (taskResult != pdPASS)
     {
@@ -129,14 +128,13 @@ void setup()
     while (!WiFi.isConnected())
         delay(10);
 
-    taskResult = xTaskCreatePinnedToCore(
+    taskResult = xTaskCreate(
         playerTask,
         "playerTask",
         8000,
         NULL,
-        ((tskIDLE_PRIORITY + 2) | portPRIVILEGE_BIT),
-        NULL,
-        PRO_CPU_NUM);
+        ((tskIDLE_PRIORITY + 3) | portPRIVILEGE_BIT),
+        NULL);
 
     if (taskResult != pdPASS)
     {
@@ -145,14 +143,13 @@ void setup()
             delay(100);
     }
 
-    taskResult = xTaskCreatePinnedToCore(
+    taskResult = xTaskCreate(
         serverTask,
         "serverTask",
         4000,
         NULL,
         tskIDLE_PRIORITY + 5,
-        NULL,
-        APP_CPU_NUM);
+        NULL);
 
     if (taskResult != pdPASS)
     {
