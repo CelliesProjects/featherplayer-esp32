@@ -69,9 +69,9 @@ void setup()
     BaseType_t taskResult = xTaskCreate(
         tftTask,
         "tftTask",
-        2700,
+        2048,
         NULL,
-        tskIDLE_PRIORITY + 5,
+        (tskIDLE_PRIORITY + 11) | portPRIVILEGE_BIT,
         NULL);
 
     if (taskResult != pdPASS)
@@ -153,9 +153,9 @@ void setup()
     taskResult = xTaskCreate(
         playerTask,
         "playerTask",
-        8000,
+        6144,
         NULL,
-        ((tskIDLE_PRIORITY + 4) | portPRIVILEGE_BIT),
+        (tskIDLE_PRIORITY + 10),
         NULL);
 
     if (taskResult != pdPASS)

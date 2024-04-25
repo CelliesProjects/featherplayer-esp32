@@ -7,6 +7,7 @@ void playerTask(void *parameter)
         msg.action = tftMessage::SYSTEM_MESSAGE;
         snprintf(msg.str, sizeof(msg.str), "Starting codec...");
         xQueueSend(tftQueue, &msg, portMAX_DELAY);
+        taskYIELD();
     }
     static ESP32_VS1053_Stream audio;
 
@@ -47,20 +48,22 @@ void playerTask(void *parameter)
                 break;
 
             case playerMessage::START_ITEM:
-                if (playList.size() < msg.value)
-                {
-                    log_e("out of bound item requested");
-                    break;
-                }
-
-                playList.setCurrentItem(msg.value);
-
                 if (audio.isRunning())
                 {
                     xSemaphoreTake(spiMutex, portMAX_DELAY);
                     audio.stopSong();
                     xSemaphoreGive(spiMutex);
                 }
+
+                if (msg.value >= playList.size())
+                {
+                    log_w("playback stops because requested item is out of bounds");
+                    _paused = false;
+                    playListEnd();
+                    break;
+                }
+
+                playList.setCurrentItem(msg.value);
 
                 {
                     serverMessage msg;
@@ -90,6 +93,7 @@ void playerTask(void *parameter)
                             snprintf(msg.str, sizeof(msg.str), "%s", playList.name(playList.currentItem()).c_str());
                             xQueueSend(tftQueue, &msg, portMAX_DELAY);
                         }
+                        taskYIELD();
                         serverMessage msg;
                         msg.type = serverMessage::WS_UPDATE_NOWPLAYING;
                         xQueueSend(serverQueue, &msg, portMAX_DELAY);
@@ -119,6 +123,7 @@ void playerTask(void *parameter)
                     else
                         snprintf(msg.str, sizeof(msg.str), "%s", audio.currentCodec());
                     xQueueSend(tftQueue, &msg, portMAX_DELAY);
+                    taskYIELD();
                 }
 
                 _paused = false;
