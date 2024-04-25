@@ -2,6 +2,12 @@
 
 void playerTask(void *parameter)
 {
+    {
+        tftMessage msg;
+        msg.action = tftMessage::SYSTEM_MESSAGE;
+        snprintf(msg.str, sizeof(msg.str), "Starting codec...");
+        xQueueSend(tftQueue, &msg, portMAX_DELAY);
+    }
     static ESP32_VS1053_Stream audio;
 
     xSemaphoreTake(spiMutex, portMAX_DELAY);
