@@ -127,6 +127,29 @@ void setup()
     while (!WiFi.isConnected())
         delay(10);
 
+    log_i("WiFi connected - IP %s", WiFi.localIP().toString().c_str());
+
+    configTzTime(TIMEZONE, NTP_POOL);
+
+    struct tm timeinfo
+    {
+    };
+
+    log_i("Waiting for NTP sync...");
+    {
+        tftMessage msg;
+        msg.action = tftMessage::SYSTEM_MESSAGE;
+        snprintf(msg.str, sizeof(msg.str), "Synching NTP...");
+        xQueueSend(tftQueue, &msg, portMAX_DELAY);
+    }
+    
+    delay(2);
+
+    while (!getLocalTime(&timeinfo, 0))
+        delay(10);
+
+    log_i("Synced");
+
     taskResult = xTaskCreate(
         playerTask,
         "playerTask",

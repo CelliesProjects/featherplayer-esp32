@@ -101,8 +101,9 @@ void callbackSetup(AsyncWebServer &server)
 
     server.on("/stations", HTTP_GET, [](AsyncWebServerRequest *request)
               {
+        if (htmlUnmodified(request, modifiedDate)) return request->send(304);
         AsyncResponseStream* const response = request->beginResponseStream(HTML_MIMETYPE);
-        response->addHeader("Cache-Control", "no-cache,no-store,must-revalidate,max-age=0");
+        response->addHeader(HEADER_LASTMODIFIED, modifiedDate);
         auto i = 0;
         while (i < NUMBER_OF_PRESETS)
             response->printf("%s\n", preset[i++].name.c_str());
