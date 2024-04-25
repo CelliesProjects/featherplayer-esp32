@@ -101,9 +101,8 @@ void callbackSetup(AsyncWebServer &server)
 
     server.on("/stations", HTTP_GET, [](AsyncWebServerRequest *request)
               {
-        if (htmlUnmodified(request, modifiedDate)) return request->send(304);
         AsyncResponseStream* const response = request->beginResponseStream(HTML_MIMETYPE);
-        response->addHeader(HEADER_LASTMODIFIED, modifiedDate);
+        response->addHeader("Cache-Control", "no-cache,no-store,must-revalidate,max-age=0");
         auto i = 0;
         while (i < NUMBER_OF_PRESETS)
             response->printf("%s\n", preset[i++].name.c_str());
@@ -224,7 +223,7 @@ void serverTask(void *parameter)
     while (1)
     {
         static serverMessage msg{};
-        if (xQueueReceive(serverQueue, &msg, 0) == pdTRUE)
+        if (xQueueReceive(serverQueue, &msg, portMAX_DELAY) == pdTRUE)
         {
             switch (msg.type)
             {
@@ -312,7 +311,5 @@ void serverTask(void *parameter)
             }
             ws.cleanupClients();
         }
-        else
-            vTaskDelay(pdTICKS_TO_MS(1));
     }
 }
