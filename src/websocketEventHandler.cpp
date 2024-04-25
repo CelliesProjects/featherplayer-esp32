@@ -13,8 +13,6 @@ void websocketEventHandler(AsyncWebSocket *server, AsyncWebSocketClient *client,
         msg.value = client->id();
         msg.type = serverMessage::WS_UPDATE_PLAYLIST;
         xQueueSend(serverQueue, &msg, portMAX_DELAY);
-        msg.type = serverMessage::WS_UPDATE_NOWPLAYING;
-        xQueueSend(serverQueue, &msg, portMAX_DELAY);
         msg.type = serverMessage::WS_UPDATE_FAVORITES;
         xQueueSend(serverQueue, &msg, portMAX_DELAY);
         msg.type = serverMessage::WS_UPDATE_VOLUME;
