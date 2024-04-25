@@ -144,6 +144,14 @@ void playerTask(void *parameter)
         constexpr const auto UPDATE_INTERVAL_MS = 1000 / MAX_UPDATE_FREQ_HZ;
         static unsigned long savedTime = millis();
 
+        if (audio.isRunning()) /* send buffer status to tft */
+        {
+            tftMessage msg;
+            audio.bufferStatus(msg.value1, msg.value2);
+            msg.action = tftMessage::BUFFER_STATUS;
+            xQueueSend(tftQueue, &msg, portMAX_DELAY);
+        }
+
         if (audio.size() && millis() - savedTime > UPDATE_INTERVAL_MS)
         {
             log_d("Buffer status: %s", audio.bufferStatus());

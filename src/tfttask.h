@@ -27,7 +27,8 @@ struct tftMessage
         SHOW_STATION,
         SHOW_TITLE,
         SHOW_CODEC,
-        SHOW_IPADDRESS
+        SHOW_IPADDRESS,
+        BUFFER_STATUS
     };
     action action;
     char str[256];

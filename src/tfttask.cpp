@@ -16,9 +16,8 @@ void tftTask(void *parameter)
     digitalWrite(TFT_I2C_POWER, HIGH);
     delay(5);
 
-    //static const auto BACKGROUND_COLOR = ST77XX_YELLOW;
     static const auto BACKGROUND_COLOR = 0x18e3; // 8 bit value = #1c1c1c dark grey
-    static const auto TEXT_COLOR = 0xf79b; // 8 bit value = #f5f4e2 yellowish
+    static const auto TEXT_COLOR = 0xf79b;       // 8 bit value = #f5f4e2 yellowish
 
     // initialize the TFT
     xSemaphoreTake(spiMutex, portMAX_DELAY);
@@ -119,6 +118,14 @@ void tftTask(void *parameter)
                 xSemaphoreTake(spiMutex, portMAX_DELAY);
                 tft.print(msg.str);
                 xSemaphoreGive(spiMutex);
+
+                tft.setFont();
+                tft.setTextSize(1);
+                tft.setCursor(152, 53);
+                xSemaphoreTake(spiMutex, portMAX_DELAY);
+                tft.print("buffer status");
+                tft.drawRect(148, 50, 85, 24, TEXT_COLOR);
+                xSemaphoreGive(spiMutex);
                 break;
             case tftMessage::SHOW_IPADDRESS:
             {
@@ -136,6 +143,21 @@ void tftTask(void *parameter)
                 xSemaphoreGive(spiMutex);
                 break;
             }
+
+            case tftMessage::BUFFER_STATUS:
+            {
+                const int X_OFFSET = 150;
+                const int HEIGHT_OFFSET = 63;
+                const int BAR_WIDTH = 80;
+                const int BAR_HEIGHT = 7;
+                const int16_t FILLED_AREA = map_range(msg.value1, 0, msg.value2, 0, BAR_WIDTH);
+                xSemaphoreTake(spiMutex, portMAX_DELAY);
+                tft.fillRect(X_OFFSET, HEIGHT_OFFSET, FILLED_AREA, BAR_HEIGHT, ST77XX_BLUE);
+                tft.fillRect(X_OFFSET + FILLED_AREA, HEIGHT_OFFSET, BAR_WIDTH - FILLED_AREA, BAR_HEIGHT, ST77XX_WHITE);
+                xSemaphoreGive(spiMutex);
+                break;
+            }
+
             default:
                 log_w("unhandled tft msg type");
             }
