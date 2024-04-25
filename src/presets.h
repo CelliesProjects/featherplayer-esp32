@@ -19,7 +19,7 @@ const struct source preset[]{
     {"Amsterdam Funk Channel", "http://stream.afc.fm:8504/stream"},
     {"Radio Gelderland", "http://d2od87akyl46nm.cloudfront.net/icecast/omroepgelderland/radiogelderland"},
     {"Jazz Radio Funk", "http://jazz-wr06.ice.infomaniak.ch/jazz-wr06-128.mp3"},
-    {"Radio 10 Disco Classics", "http://19993.live.streamtheworld.com/RADIO10.mp3"},
+    {"Radio 10 Disco Classics", "http://25283.live.streamtheworld.com/TLPSTR23_SC"},
     {"Sublime Soul", "http://playerservices.streamtheworld.com/api/livestream-redirect/SUBLIMESOUL.mp3"},
     {"XXL Stenders", "http://streams.robstenders.nl:8063/bonanza_mp3"},
     {"LXClassics", "http://www.lxclassics.com/playlist/LXClassics.m3u"},
