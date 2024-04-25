@@ -49,6 +49,7 @@ void tftTask(void *parameter)
     static int16_t streamTitleOffset = 0;
 
     static const auto TOP_OF_SCROLLER = 76;
+    static bool showClock = false;
 
     while (1)
     {
@@ -82,6 +83,7 @@ void tftTask(void *parameter)
                 break;
             }
             case tftMessage::CLEAR_SCREEN:
+                showClock = false;
                 streamTitle[0] = 0;
                 streamTitleOffset = 0;
                 xSemaphoreTake(spiMutex, portMAX_DELAY);
@@ -132,10 +134,10 @@ void tftTask(void *parameter)
                 tft.setFont(&FreeSansBold18pt7b);
                 tft.setTextSize(1);
                 tft.setTextColor(TEXT_COLOR);
-                static int16_t xpos;
-                static int16_t ypos;
-                static uint16_t height;
-                static uint16_t width;
+                int16_t xpos;
+                int16_t ypos;
+                uint16_t height;
+                uint16_t width;
                 tft.getTextBounds(WiFi.localIP().toString().c_str(), 0, 0, &xpos, &ypos, &width, &height);
                 tft.setCursor((tft.width() / 2) - (width / 2), tft.height() - (height / 2) + 4);
                 xSemaphoreTake(spiMutex, portMAX_DELAY);
@@ -143,6 +145,10 @@ void tftTask(void *parameter)
                 xSemaphoreGive(spiMutex);
                 break;
             }
+
+            case tftMessage::SHOW_CLOCK:
+                showClock = true;
+                break;
 
             case tftMessage::BUFFER_STATUS:
             {
@@ -161,6 +167,35 @@ void tftTask(void *parameter)
             default:
                 log_w("unhandled tft msg type");
             }
+        }
+
+        static auto lastClockUpdate = time(NULL);
+
+        if (showClock && lastClockUpdate != time(NULL))
+        {
+            GFXcanvas16 clock(tft.width(), TOP_OF_SCROLLER);
+
+            clock.setFont(&FreeSansBold24pt7b);
+            clock.setTextSize(2);
+            clock.setTextColor(ST77XX_BLUE);
+
+            time_t t;
+            time(&t);
+            struct tm *timeinfo = localtime(&t);
+            char buff[12];
+            strftime(buff, sizeof(buff), "%R", timeinfo);
+            int16_t xpos;
+            int16_t ypos;
+            uint16_t height;
+            uint16_t width;
+            clock.getTextBounds(buff, 0, 0, &xpos, &ypos, &width, &height);
+            clock.setCursor((tft.width() / 2) - (width / 2), TOP_OF_SCROLLER - 10);
+            clock.print(buff);
+
+            xSemaphoreTake(spiMutex, portMAX_DELAY);
+            tft.drawRGBBitmap(0, 0, clock.getBuffer(), clock.width(), clock.height());
+            xSemaphoreGive(spiMutex);
+            lastClockUpdate = time(NULL);
         }
 
         if (streamTitle[0] || clearTitle)

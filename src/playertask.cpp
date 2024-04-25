@@ -219,4 +219,7 @@ void playListEnd()
     msg.action = tftMessage::SHOW_TITLE;
     snprintf(msg.str, sizeof(msg.str), "%s - %s", PROGRAM_NAME, GIT_VERSION);
     xQueueSend(tftQueue, &msg, portMAX_DELAY);
+
+    msg.action = tftMessage::SHOW_CLOCK;
+    xQueueSend(tftQueue, &msg, portMAX_DELAY);
 }

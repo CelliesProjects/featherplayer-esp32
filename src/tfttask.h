@@ -6,6 +6,7 @@
 #include <Adafruit_ST7789.h>
 #include <Fonts/FreeSansBold9pt7b.h>
 #include <Fonts/FreeSansBold18pt7b.h>
+#include <Fonts/FreeSansBold24pt7b.h>
 
 extern const char *PROGRAM_NAME;
 extern SemaphoreHandle_t spiMutex;
@@ -28,6 +29,7 @@ struct tftMessage
         SHOW_TITLE,
         SHOW_CODEC,
         SHOW_IPADDRESS,
+        SHOW_CLOCK,
         BUFFER_STATUS
     };
     action action;
