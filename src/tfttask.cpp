@@ -158,8 +158,8 @@ void tftTask(void *parameter)
                 const int BAR_HEIGHT = 7;
                 const int16_t FILLED_AREA = map_range(msg.value1, 0, msg.value2, 0, BAR_WIDTH);
                 xSemaphoreTake(spiMutex, portMAX_DELAY);
-                tft.fillRect(X_OFFSET, HEIGHT_OFFSET, FILLED_AREA, BAR_HEIGHT, ST77XX_BLUE);
-                tft.fillRect(X_OFFSET + FILLED_AREA, HEIGHT_OFFSET, BAR_WIDTH - FILLED_AREA, BAR_HEIGHT, ST77XX_WHITE);
+                tft.fillRect(X_OFFSET, HEIGHT_OFFSET, FILLED_AREA, BAR_HEIGHT, ST77XX_GREEN);
+                tft.fillRect(X_OFFSET + FILLED_AREA, HEIGHT_OFFSET, BAR_WIDTH - FILLED_AREA, BAR_HEIGHT, ST77XX_RED);
                 xSemaphoreGive(spiMutex);
                 break;
             }
@@ -169,7 +169,7 @@ void tftTask(void *parameter)
             }
         }
 
-        static auto lastClockUpdate = time(NULL);
+        static time_t lastClockUpdate = 0;
 
         if (showClock && lastClockUpdate != time(NULL))
         {
@@ -177,20 +177,25 @@ void tftTask(void *parameter)
 
             clock.setFont(&FreeSansBold24pt7b);
             clock.setTextSize(2);
-            clock.setTextColor(ST77XX_BLUE);
+            clock.fillScreen(BACKGROUND_COLOR);
 
             time_t t;
             time(&t);
             struct tm *timeinfo = localtime(&t);
             char buff[12];
-            strftime(buff, sizeof(buff), "%R", timeinfo);
             int16_t xpos;
             int16_t ypos;
             uint16_t height;
             uint16_t width;
+            strftime(buff, sizeof(buff), "%R", timeinfo);
             clock.getTextBounds(buff, 0, 0, &xpos, &ypos, &width, &height);
-            clock.setCursor((tft.width() / 2) - (width / 2), TOP_OF_SCROLLER - 10);
+            clock.setTextColor(TEXT_COLOR);
+            clock.setCursor((clock.width() / 2) - (width / 2) - 5, TOP_OF_SCROLLER - 6);
             clock.print(buff);
+
+            clock.setTextColor(TEXT_COLOR);       
+            clock.setCursor((clock.width() / 2) - (width / 2) - 3, TOP_OF_SCROLLER - 6);
+            clock.print(buff);            
 
             xSemaphoreTake(spiMutex, portMAX_DELAY);
             tft.drawRGBBitmap(0, 0, clock.getBuffer(), clock.width(), clock.height());
