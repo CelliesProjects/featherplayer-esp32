@@ -4,7 +4,7 @@
 <head>
     <script>
         //setting for dev/debug */
-        const debugip = "192.168.0.103";  //change this to the esp32 ip for remote running of this page
+        const debugip = "192.168.0.105";  //change this to the esp32 ip for remote running of this page
     </script>
     <meta charset="utf-8">
     <meta name="viewport" content="minimal-ui,width=device-width,initial-scale=1">
@@ -675,7 +675,11 @@
                             $('.plitem').eq(currentItem).css("background-color", "cadetblue");
                         break;
 
-                    case "playlist":
+                    case "playlist":                    
+                        $('.plitem').css("background-color", "");
+                        currentItem = parseInt(command[1]);
+                        console.log('currentItem: ' + currentItem);
+
                         if (command[2] == '') {
                             $('#PLAYLIST').html('<p class="errormessage">' + erroricon + '<span class="text">No items in playlist</span></p>');
                             return;
@@ -702,14 +706,9 @@
                             }
                             $('#PLAYLIST').append('<p class="plitem">' + removebutton + typeicon + '<span class="text">' + command[i] + '</span></p>');
                         }                        
-                        //$('#progress2, #progressinput').hide();
-                        $('.plitem').css("background-color", "");
-                        currentItem = parseInt(command[1]);
-                        console.log('currentItem: ' + currentItem);
                         if (currentItem != -1)
-                            $('.plitem').eq(currentItem).css("background-color", "cadetblue");                        
-                        
-                        
+                            $('.plitem').eq(currentItem).css("background-color", "cadetblue");
+                                                                        
                         break;
 
                     case "message":
@@ -763,6 +762,7 @@
             ws.onopen = function () {
                 console.log('Websocket connected');
                 $('#streamtitle').html('');
+                $('#progress2, #progressinput').hide();
             }
 
             ws.onclose = function () {
