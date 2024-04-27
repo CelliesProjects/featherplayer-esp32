@@ -69,9 +69,9 @@ void setup()
     BaseType_t taskResult = xTaskCreate(
         tftTask,
         "tftTask",
-        2048,
+        4096,
         NULL,
-        (tskIDLE_PRIORITY + 11) | portPRIVILEGE_BIT,
+        (tskIDLE_PRIORITY + 10) | portPRIVILEGE_BIT,
         NULL);
 
     if (taskResult != pdPASS)
@@ -142,7 +142,6 @@ void setup()
         snprintf(msg.str, sizeof(msg.str), "Synching NTP...");
         xQueueSend(tftQueue, &msg, portMAX_DELAY);
     }
-    
     delay(2);
 
     while (!getLocalTime(&timeinfo, 0))
@@ -155,7 +154,7 @@ void setup()
         "playerTask",
         6144,
         NULL,
-        (tskIDLE_PRIORITY + 10),
+        (tskIDLE_PRIORITY + 8) | portPRIVILEGE_BIT,
         NULL);
 
     if (taskResult != pdPASS)
@@ -168,9 +167,9 @@ void setup()
     taskResult = xTaskCreate(
         serverTask,
         "serverTask",
-        4000,
+        4096,
         NULL,
-        tskIDLE_PRIORITY + 8,
+        (tskIDLE_PRIORITY + 2) /* | portPRIVILEGE_BIT*/,
         NULL);
 
     if (taskResult != pdPASS)
