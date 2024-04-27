@@ -4,7 +4,7 @@
 <head>
     <script>
         //setting for dev/debug */
-        const debugip = "192.168.0.105";  //change this to the esp32 ip for remote running of this page
+        const debugip = "192.168.0.107";  //change this to the esp32 ip for remote running of this page
     </script>
     <meta charset="utf-8">
     <meta name="viewport" content="minimal-ui,width=device-width,initial-scale=1">
@@ -439,7 +439,7 @@
         }
 
         function getPresets() {
-            $.get(http_host + "/stations")
+            $.get(http_host + "/stations?" + Math.floor(Math.random() * 1000000000))
                 .done(function (data) {
                     var stations = data.split('\n');
                     $('#WEBRADIO').html('');
