@@ -73,7 +73,7 @@ void tftTask(void *parameter)
 
             case tftMessage::PROGRESS_BAR:
             {
-                const int HEIGHT_IN_PIXELS = 20;
+                const int HEIGHT_IN_PIXELS = 15;
                 const int HEIGHT_OFFSET = 28;
                 const int16_t FILLED_AREA = map_range(msg.value1, 0, msg.value2, 0, tft.width() + 1);
                 xSemaphoreTake(spiMutex, portMAX_DELAY);
@@ -193,9 +193,9 @@ void tftTask(void *parameter)
             clock.setCursor((clock.width() / 2) - (width / 2) - 5, TOP_OF_SCROLLER - 6);
             clock.print(buff);
 
-            clock.setTextColor(TEXT_COLOR);       
+            clock.setTextColor(TEXT_COLOR);
             clock.setCursor((clock.width() / 2) - (width / 2) - 3, TOP_OF_SCROLLER - 6);
-            clock.print(buff);            
+            clock.print(buff);
 
             xSemaphoreTake(spiMutex, portMAX_DELAY);
             tft.drawRGBBitmap(0, 0, clock.getBuffer(), clock.width(), clock.height());

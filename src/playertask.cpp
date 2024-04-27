@@ -7,7 +7,7 @@ void playerTask(void *parameter)
         msg.action = tftMessage::SYSTEM_MESSAGE;
         snprintf(msg.str, sizeof(msg.str), "Starting codec...");
         xQueueSend(tftQueue, &msg, portMAX_DELAY);
-        delay(2);
+        delay(4);
     }
     static ESP32_VS1053_Stream audio;
 
@@ -93,7 +93,6 @@ void playerTask(void *parameter)
                             snprintf(msg.str, sizeof(msg.str), "%s", playList.name(playList.currentItem()).c_str());
                             xQueueSend(tftQueue, &msg, portMAX_DELAY);
                         }
-                        delay(2);
                         serverMessage msg;
                         msg.type = serverMessage::WS_UPDATE_NOWPLAYING;
                         xQueueSend(serverQueue, &msg, portMAX_DELAY);
@@ -123,7 +122,6 @@ void playerTask(void *parameter)
                     else
                         snprintf(msg.str, sizeof(msg.str), "%s", audio.currentCodec());
                     xQueueSend(tftQueue, &msg, portMAX_DELAY);
-                    delay(2);
                 }
 
                 _paused = false;
