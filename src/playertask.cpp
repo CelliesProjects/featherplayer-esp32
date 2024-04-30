@@ -57,7 +57,7 @@ void playerTask(void *parameter)
 
                 if (msg.value >= playList.size())
                 {
-                    log_w("playback stops because requested item is out of bounds");
+                    log_w("playlist ended");
                     _paused = false;
                     playListEnd();
                     break;
