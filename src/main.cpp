@@ -110,7 +110,7 @@ void setup()
         "tftTask",
         4096,
         NULL,
-        tskIDLE_PRIORITY + 10,
+        tskIDLE_PRIORITY + 7,
         NULL);
 
     if (taskResult != pdPASS)
@@ -193,7 +193,7 @@ void setup()
         "playerTask",
         6144,
         NULL,
-        tskIDLE_PRIORITY + 8,
+        tskIDLE_PRIORITY + 6,
         NULL);
 
     if (taskResult != pdPASS)
@@ -208,7 +208,7 @@ void setup()
         "serverTask",
         4096,
         NULL,
-        tskIDLE_PRIORITY + 2,
+        tskIDLE_PRIORITY + 5,
         NULL);
 
     if (taskResult != pdPASS)
