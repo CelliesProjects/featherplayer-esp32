@@ -24,13 +24,9 @@ void tftTask(void *parameter)
     static Adafruit_ST7789 tft = Adafruit_ST7789(TFT_CS, TFT_DC, TFT_RST);
     tft.init(135, 240, SPI_MODE0);
     tft.setRotation(1);
-    tft.setFont(&FreeSansBold9pt7b);
     tft.fillScreen(BACKGROUND_COLOR);
     tft.setTextColor(TEXT_COLOR, BACKGROUND_COLOR);
-    tft.setTextSize(1);
-    tft.setCursor(2, 14);
     tft.setTextWrap(false);
-    tft.printf("%s %s", PROGRAM_NAME, GIT_VERSION);
     xSemaphoreGive(spiMutex);
 
     // setup tft backlight pwm
@@ -39,7 +35,7 @@ void tftTask(void *parameter)
 
     ledcSetup(LEDC_CHANNEL, 1220, SOC_LEDC_TIMER_BIT_WIDE_NUM);
     ledcAttachPin(TFT_BACKLITE, LEDC_CHANNEL);
-    ledcWrite(LEDC_CHANNEL, LEDC_MAX_PWM_VALUE >> (SOC_LEDC_TIMER_BIT_WIDE_NUM / 3));
+    ledcWrite(LEDC_CHANNEL, LEDC_MAX_PWM_VALUE / 2);
 
     static GFXcanvas16 canvas(tft.width(), 20);
     static int16_t strX, strY;
