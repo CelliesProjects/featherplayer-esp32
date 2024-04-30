@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #include <WiFi.h>
-// #include <FS.h>
-// #include <SD.h>
+#include <FS.h>
+#include <SD.h>
 
 #include "websocketEventHandler.h"
 #include "icons.h"
@@ -20,6 +20,44 @@ QueueHandle_t tftQueue = nullptr;
 QueueHandle_t playerQueue = nullptr;
 QueueHandle_t serverQueue = nullptr;
 
+
+void mountSDcard()
+{
+    if (!SD.begin(SDREADER_CS))
+    {
+        log_e("Card Mount Failed");
+        return;
+    }
+    uint8_t cardType = SD.cardType();
+
+    if (cardType == CARD_NONE)
+    {
+        log_e("No SD card attached");
+        return;
+    }
+
+    log_i("SD Card Type: ");
+    if (cardType == CARD_MMC)
+    {
+        log_i("MMC");
+    }
+    else if (cardType == CARD_SD)
+    {
+        log_i("SDSC");
+    }
+    else if (cardType == CARD_SDHC)
+    {
+        log_i("SDHC");
+    }
+    else
+    {
+        log_i("UNKNOWN");
+    }
+
+    uint64_t cardSize = SD.cardSize() / (1024 * 1024);
+    log_i("SD Card Size: %lluMB\n", cardSize);
+}
+
 void setup()
 {
     [[maybe_unused]] const uint32_t idf = ESP_IDF_VERSION_PATCH + ESP_IDF_VERSION_MINOR * 10 + ESP_IDF_VERSION_MAJOR * 100;
@@ -32,8 +70,6 @@ void setup()
     SPI.setHwCs(true);
     SPI.begin(SCK, MISO, MOSI);
 
-    // mountSDcard(); /* !!! without mutex! */
-
     spiMutex = xSemaphoreCreateMutex();
     if (!spiMutex)
     {
@@ -41,6 +77,10 @@ void setup()
         while (1)
             delay(100);
     }
+
+    xSemaphoreTake(spiMutex, portMAX_DELAY);
+    mountSDcard();
+    xSemaphoreGive(spiMutex);
 
     tftQueue = xQueueCreate(2, sizeof(struct tftMessage));
     if (!tftQueue)
