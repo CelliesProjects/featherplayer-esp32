@@ -6,7 +6,7 @@
 #include "websocketEventHandler.h"
 #include "icons.h"
 #include "percentEncode.h"
-#include "WiFiCredentials.h"
+#include "WiFiCredentials.h" /* untracked file in folder include */
 
 const char *PROGRAM_NAME = "featherplayer-esp32";
 const char *FAVORITES_FOLDER = "/"; /* if this is a folder use a closing slash */
@@ -19,7 +19,6 @@ SemaphoreHandle_t spiMutex = nullptr; // SPI bus is shared between playertask -V
 QueueHandle_t tftQueue = nullptr;
 QueueHandle_t playerQueue = nullptr;
 QueueHandle_t serverQueue = nullptr;
-
 
 void mountSDcard()
 {
@@ -255,5 +254,5 @@ void audio_showstation(const char *info)
     serverMessage msg;
     msg.type = serverMessage::WS_UPDATE_STATION;
     snprintf(msg.str, sizeof(msg.str), "%s", info);
-    xQueueSend(serverQueue, &msg, portMAX_DELAY);    
+    xQueueSend(serverQueue, &msg, portMAX_DELAY);
 }
