@@ -208,8 +208,6 @@ void playListEnd()
     }
 
     tftMessage msg;
-    msg.action = tftMessage::CLEAR_SCREEN;
-    xQueueSend(tftQueue, &msg, portMAX_DELAY);
 
     msg.action = tftMessage::SHOW_IPADDRESS;
     xQueueSend(tftQueue, &msg, portMAX_DELAY);
