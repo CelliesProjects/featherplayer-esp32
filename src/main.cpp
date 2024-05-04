@@ -66,6 +66,8 @@ void setup()
     log_i("CPU: %iMhz", getCpuFrequencyMhz());
     log_i("Found %i presets", NUMBER_OF_PRESETS);
 
+    btStop(); /* switch off BleueTooth radio as it is not used in this app */
+
     SPI.setHwCs(true);
     SPI.begin(SCK, MISO, MOSI);
 
