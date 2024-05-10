@@ -24,6 +24,7 @@ const struct source preset[]{
     {"XXL Stenders", "http://streams.robstenders.nl:8063/bonanza_mp3"},
     {"LXClassics", "http://www.lxclassics.com/playlist/LXClassics.m3u"},
     {"192 Radio Nederland", "http://192radio.stream-server.nl/stream"},
+    {"80s Hitradio Amsterdam","http://s22.myradiostream.com:7728/"},
     {"RadioEins", "http://radioeins.de/stream"},
     {"Tekno1", "http://tekno1.radioca.st/"},
     {"Techno Lovers - Funky House", "http://stream.technolovers.fm/funky-house"},
