@@ -21,6 +21,9 @@ void websocketEventHandler(AsyncWebSocket *server, AsyncWebSocketClient *client,
         xQueueSend(serverQueue, &msg, portMAX_DELAY);
         msg.type = serverMessage::WS_UPDATE_STATION;
         xQueueSend(serverQueue, &msg, portMAX_DELAY);
+        msg.type = serverMessage::WS_UPDATE_STATUS;
+        snprintf(msg.str, sizeof(msg.str), "%s", _paused ? "paused" : "playing");
+        xQueueSend(serverQueue, &msg, portMAX_DELAY);
         break;
     }
     case WS_EVT_DISCONNECT:
@@ -180,25 +183,27 @@ void handleSingleFrame(AsyncWebSocketClient *client, uint8_t *data, size_t len)
 
     if (_paused && !strcmp("unpause", pch))
     {
-        /*playerMessage msg;
+        playerMessage msg;
         msg.action = playerMessage::START_ITEM;
         msg.offset = _savedPosition;
         msg.value = playList.currentItem();
         xQueueSend(playerQueue, &msg, portMAX_DELAY);
-        return;*/
+        return;
     }
 
-    if (!_paused && !strcmp("pause", pch))
+    else if (!_paused && !strcmp("pause", pch))
     {
-        /*
+        _paused = true;
         playerMessage msg;
         msg.action = playerMessage::PAUSE;
         xQueueSend(playerQueue, &msg, portMAX_DELAY);
 
-        msg.action = playerMessage::WS_PASS_MESSAGE;
-        snprintf(msg.str, sizeof(msg.str), "status\npaused\n");
-        xQueueSend(playerQueue, &msg, portMAX_DELAY);
-        */
+        {
+            serverMessage msg;
+            msg.type = serverMessage::WS_UPDATE_STATUS;
+            snprintf(msg.str, sizeof(msg.str), "paused");
+            xQueueSend(serverQueue, &msg, portMAX_DELAY);
+        }
     }
 
     else if (!strcmp("volume", pch))

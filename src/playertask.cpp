@@ -22,8 +22,6 @@ void playerTask(void *parameter)
 
     playListEnd();
 
-    [[maybe_unused]] static size_t _savedPosition = 0;
-
     log_i("Ready to rock!");
 
     while (1)
@@ -58,48 +56,57 @@ void playerTask(void *parameter)
                 if (msg.value >= playList.size())
                 {
                     log_w("playlist ended");
-                    _paused = false;
                     playListEnd();
                     break;
                 }
 
                 playList.setCurrentItem(msg.value);
 
+                if (_paused)
                 {
+                    serverMessage msg;
+                    msg.type = serverMessage::WS_UPDATE_STATUS;
+                    snprintf(msg.str, sizeof(msg.str), "playing");
+                    xQueueSend(serverQueue, &msg, portMAX_DELAY);
+                }
+
+                if (!msg.offset)
+                {
+                    {
+                        tftMessage msg;
+                        msg.action = tftMessage::CLEAR_SCREEN;
+                        xQueueSend(tftQueue, &msg, portMAX_DELAY);
+
+                        msg.str[0] = 0;
+                        msg.action = tftMessage::SHOW_TITLE; // send empty title to tft to erase the scrollbar
+                        xQueueSend(tftQueue, &msg, portMAX_DELAY);
+                    }
+
                     serverMessage msg;
                     msg.str[0] = 0;
                     msg.type = serverMessage::WS_UPDATE_STREAMTITLE; // send empty title to websocket clients
                     xQueueSend(serverQueue, &msg, portMAX_DELAY);
                 }
 
-                {
-                    tftMessage msg;
-                    msg.str[0] = 0;
-                    msg.action = tftMessage::SHOW_TITLE; // send empty title to tft to erase the scrollbar
-                    xQueueSend(tftQueue, &msg, portMAX_DELAY);
-                }
-
                 /* keep trying until some stream starts or we reach the end of playlist */
                 while (playList.currentItem() < playList.size())
                 {
-                    if (!_paused && !msg.offset)
+                    if (!msg.offset)
                     {
                         {
-                            tftMessage msg;
-                            msg.action = tftMessage::CLEAR_SCREEN;
-                            xQueueSend(tftQueue, &msg, portMAX_DELAY);
+                            serverMessage msg;
+                            msg.type = serverMessage::WS_UPDATE_NOWPLAYING;
+                            xQueueSend(serverQueue, &msg, portMAX_DELAY);
 
-                            msg.action = tftMessage::SHOW_STATION;
+                            msg.type = serverMessage::WS_UPDATE_STATION;
                             snprintf(msg.str, sizeof(msg.str), "%s", playList.name(playList.currentItem()).c_str());
-                            xQueueSend(tftQueue, &msg, portMAX_DELAY);
+                            xQueueSend(serverQueue, &msg, portMAX_DELAY);
                         }
-                        serverMessage msg;
-                        msg.type = serverMessage::WS_UPDATE_NOWPLAYING;
-                        xQueueSend(serverQueue, &msg, portMAX_DELAY);
 
-                        msg.type = serverMessage::WS_UPDATE_STATION;
+                        tftMessage msg;
+                        msg.action = tftMessage::SHOW_STATION;
                         snprintf(msg.str, sizeof(msg.str), "%s", playList.name(playList.currentItem()).c_str());
-                        xQueueSend(serverQueue, &msg, portMAX_DELAY);
+                        xQueueSend(tftQueue, &msg, portMAX_DELAY);
                     }
 
                     xSemaphoreTake(spiMutex, portMAX_DELAY);
@@ -113,7 +120,7 @@ void playerTask(void *parameter)
                     playList.setCurrentItem(playList.currentItem() + 1);
                 }
 
-                if (audio.isRunning() && !_paused && !msg.offset)
+                if (audio.isRunning())
                 {
                     tftMessage msg;
                     msg.action = tftMessage::SHOW_CODEC;

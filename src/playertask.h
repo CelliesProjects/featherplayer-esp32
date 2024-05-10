@@ -17,6 +17,7 @@ extern SemaphoreHandle_t spiMutex;
 extern QueueHandle_t playerQueue;
 extern uint8_t _playerVolume;
 extern bool _paused;
+extern size_t _savedPosition;
 
 struct playerMessage
 {

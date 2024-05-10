@@ -40,7 +40,8 @@ struct serverMessage
         WS_UPDATE_PLAYLIST,
         WS_UPDATE_VOLUME,
         WS_PASS_MESSAGE,
-        WS_UPDATE_PROGRESS
+        WS_UPDATE_PROGRESS,
+        WS_UPDATE_STATUS
     };
     type type;
     size_t value;

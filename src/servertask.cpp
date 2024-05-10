@@ -307,6 +307,17 @@ void serverTask(void *parameter)
                 ws.textAll(buff);
                 break;
             }
+
+            case serverMessage::WS_UPDATE_STATUS:
+            {
+                char buff[168];
+                snprintf(buff, sizeof(buff), "status\n%s\n", msg.str);
+                if (msg.singleClient)
+                    ws.text(msg.value, buff);
+                else
+                    ws.textAll(buff);
+                break;
+            }
             default:
                 log_w("unhandled player message with number %i", msg.type);
             }

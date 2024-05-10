@@ -12,6 +12,7 @@ const char *PROGRAM_NAME = "featherplayer-esp32";
 const char *FAVORITES_FOLDER = "/"; /* if this is a folder use a closing slash */
 playList_t playList;
 uint8_t _playerVolume = VS1053_INITIALVOLUME;
+size_t _savedPosition = 0;
 bool _paused = false;
 
 SemaphoreHandle_t spiMutex = nullptr; // SPI bus is shared between playertask -VS1053- and tfttask -ST7789-
@@ -66,7 +67,7 @@ void setup()
     log_i("CPU: %iMhz", getCpuFrequencyMhz());
     log_i("Found %i presets", NUMBER_OF_PRESETS);
 
-    btStop(); /* switch off BleueTooth radio as it is not used in this app */
+    btStop(); /* switch off BlueTooth radio as it is not used in this app */
 
     SPI.setHwCs(true);
     SPI.begin(SCK, MISO, MOSI);
@@ -112,7 +113,7 @@ void setup()
         "tftTask",
         4096,
         NULL,
-        tskIDLE_PRIORITY + 7,
+        tskIDLE_PRIORITY + 6,
         NULL);
 
     if (taskResult != pdPASS)
@@ -195,7 +196,7 @@ void setup()
         "playerTask",
         6144,
         NULL,
-        tskIDLE_PRIORITY + 6,
+        tskIDLE_PRIORITY + 7,
         NULL);
 
     if (taskResult != pdPASS)
