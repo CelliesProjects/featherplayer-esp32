@@ -35,7 +35,7 @@ void tftTask(void *parameter)
 
     ledcSetup(LEDC_CHANNEL, 1220, SOC_LEDC_TIMER_BIT_WIDE_NUM);
     ledcAttachPin(TFT_BACKLITE, LEDC_CHANNEL);
-    ledcWrite(LEDC_CHANNEL, LEDC_MAX_PWM_VALUE / 2);
+    ledcWrite(LEDC_CHANNEL, LEDC_MAX_PWM_VALUE / 10);
 
     static GFXcanvas16 canvas(tft.width(), 20);
     static int16_t strX, strY;
