@@ -60,10 +60,13 @@ void mountSDcard()
 
 void setup()
 {
-    [[maybe_unused]] const uint32_t idf = ESP_IDF_VERSION_PATCH + ESP_IDF_VERSION_MINOR * 10 + ESP_IDF_VERSION_MAJOR * 100;
-    [[maybe_unused]] const uint32_t ard = ESP_ARDUINO_VERSION_PATCH + ESP_ARDUINO_VERSION_MINOR * 10 + ESP_ARDUINO_VERSION_MAJOR * 100;
-    log_i("ESP32 IDF Version %d.%d.%d", idf / 100 % 10, idf / 10 % 10, idf % 10);
-    log_i("ESP32 Arduino Version %d.%d.%d", ard / 100 % 10, ard / 10 % 10, ard % 10);
+    Serial.begin(115200);
+    while (!Serial)
+    {
+    }
+    delay(100);
+    log_i("ESP32 IDF Version %d.%d.%d", ESP_IDF_VERSION_MAJOR, ESP_IDF_VERSION_MINOR, ESP_IDF_VERSION_PATCH);
+    log_i("ESP32 Arduino Version %d.%d.%d", ESP_ARDUINO_VERSION_MAJOR, ESP_ARDUINO_VERSION_MINOR, ESP_ARDUINO_VERSION_PATCH);
     log_i("CPU: %iMhz", getCpuFrequencyMhz());
     log_i("Found %i presets", NUMBER_OF_PRESETS);
 
@@ -84,7 +87,7 @@ void setup()
     mountSDcard();
     xSemaphoreGive(spiMutex);
 
-    tftQueue = xQueueCreate(2, sizeof(struct tftMessage));
+    tftQueue = xQueueCreate(5, sizeof(struct tftMessage));
     if (!tftQueue)
     {
         log_e("FATAL error! could not create display queue. System HALTED!");
@@ -92,7 +95,7 @@ void setup()
             delay(100);
     }
 
-    playerQueue = xQueueCreate(2, sizeof(struct playerMessage));
+    playerQueue = xQueueCreate(5, sizeof(struct playerMessage));
     if (!playerQueue)
     {
         log_e("FATAL error! could not create player queue. System HALTED!");
@@ -113,7 +116,7 @@ void setup()
         "tftTask",
         4096,
         NULL,
-        tskIDLE_PRIORITY + 6,
+        tskIDLE_PRIORITY + 16,
         NULL);
 
     if (taskResult != pdPASS)
@@ -196,7 +199,7 @@ void setup()
         "playerTask",
         6144,
         NULL,
-        tskIDLE_PRIORITY + 7,
+        tskIDLE_PRIORITY + 10,
         NULL);
 
     if (taskResult != pdPASS)
@@ -211,7 +214,7 @@ void setup()
         "serverTask",
         4096,
         NULL,
-        tskIDLE_PRIORITY + 5,
+        tskIDLE_PRIORITY + 15,
         NULL);
 
     if (taskResult != pdPASS)
