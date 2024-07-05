@@ -61,10 +61,6 @@ void mountSDcard()
 void setup()
 {
     Serial.begin(115200);
-    while (!Serial)
-    {
-    }
-    delay(100);
     log_i("ESP32 IDF Version %d.%d.%d", ESP_IDF_VERSION_MAJOR, ESP_IDF_VERSION_MINOR, ESP_IDF_VERSION_PATCH);
     log_i("ESP32 Arduino Version %d.%d.%d", ESP_ARDUINO_VERSION_MAJOR, ESP_ARDUINO_VERSION_MINOR, ESP_ARDUINO_VERSION_PATCH);
     log_i("CPU: %iMhz", getCpuFrequencyMhz());
