@@ -6,7 +6,7 @@ combined with a
 
 <img src="https://cdn-shop.adafruit.com/970x728/5691-04.jpg" alt="Adafruit ESP32-S3 Reverse TFT Feather" width="350"> <img src="https://cdn-shop.adafruit.com/970x728/3357-03.jpg" alt="Adafruit Music Maker FeatherWing" width="350">
 
-## what is it
+## What is it?
 
 A web-based esp32 music player for mp3/ogg/aac/aac+ webradio and files from a sdcard.
 
@@ -16,9 +16,9 @@ Sound output comes from a separate VS1053 mp3/aac/ogg/wav decoder breakout board
 -  <strike>Plays local files from a mounted filesystem.&nbsp;</strike>Working on it.<br>
 -  Search for web radio stations on radio-browser and save the results to your favorites.
 
-## web based interface
+## Web based interface
 
-The music player is controlled with a browser on your phone, pc or tablet.
+This player has a web interface and is controlled with a browser on your phone, pc or tablet.
 
 <img src="https://github.com/CelliesProjects/streamplayer-feather-develop/assets/24290108/0f3a9d8b-a698-450b-82ab-e4ac2b0569a3" width="70%">
 
@@ -28,9 +28,9 @@ Click on the overlay to hide it or use the info button on the bottom to toggle t
 
 On this overlay you can also save the current playing search result to the favorites tab with this <img src="https://github.com/CelliesProjects/eStreamplayer32-vs1053-pio/assets/24290108/6e0d2706-45cd-4e5d-86ba-c194101afba7"> icon.
 
-## before compiling: add your WiFi credentials
+## Before compiling: add your WiFi credentials
 
-Before compiling the project you need to edit the file `include/WiFicredentials.h` to supply your WiFi credentials:
+Before compiling the project edit the file `include/WiFicredentials.h` to supply your WiFi credentials:
 ```c++
 #ifndef WIFI_SECRETS
 #define WIFI_SECRETS
@@ -41,7 +41,7 @@ const char *PSK = "your wifi password";
 #endif
 ```
 
-## About
+## About this project
 
 -  This project is a fork of [eStreamplayer32-vs1053-pio](https://github.com/CelliesProjects/eStreamplayer32-vs1053-pio)
 -  The SPI bus is shared by the tft, the vs1053 codec chip and the sd-card.
