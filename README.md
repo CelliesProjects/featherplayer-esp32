@@ -20,6 +20,8 @@ Sound output comes from a separate VS1053 mp3/aac/ogg/wav decoder breakout board
 
 The music player is controlled with a browser on your phone, pc or tablet.
 
+<img src="https://github.com/CelliesProjects/streamplayer-feather-develop/assets/24290108/0f3a9d8b-a698-450b-82ab-e4ac2b0569a3" width="70%">
+
 The interface is kept very simple, a playlist tab on the right and selectable source tabs on the left.<br>
 After 30 seconds of inactivity the file info overlay is shown.<br>
 Click on the overlay to hide it or use the info button on the bottom to toggle the overlay.
