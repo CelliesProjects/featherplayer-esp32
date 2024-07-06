@@ -41,7 +41,7 @@ git clone https://github.com/CelliesProjects/featherplayer-esp32
 
 ## Before compiling: add your WiFi credentials
 
-Before compiling the project edit the file `include/WiFicredentials.h` to supply your WiFi credentials:
+Before compiling the project add the file `include/WiFicredentials.h` to supply your WiFi credentials:
 ```c++
 #ifndef WIFI_SECRETS
 #define WIFI_SECRETS
