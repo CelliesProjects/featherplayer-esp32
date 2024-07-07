@@ -11,10 +11,12 @@ void playerTask(void *parameter)
     }
     static ESP32_VS1053_Stream audio;
 
+    log_i("starting vs1053...");
+
     xSemaphoreTake(spiMutex, portMAX_DELAY);
     if (!audio.startDecoder(VS1053_CS, VS1053_DCS, VS1053_DREQ) || !audio.isChipConnected())
     {
-        log_e("VS1053 board could not init. System HALTED!");
+        log_e("vs1053 board could not init. System HALTED!");
         while (1)
             delay(100);
     }

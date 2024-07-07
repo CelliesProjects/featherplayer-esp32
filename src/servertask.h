@@ -2,12 +2,16 @@
 #define __SERVER_TASK__
 
 #include <FFat.h>
+#include <SD.h>
 #include <AsyncTCP.h>          /* use the esphome.io fork*/
 #include <ESPAsyncWebServer.h> /* use the esphome.io fork*/
 
 #include "playList.h"
 #include "index_htm_gz.h"
 
+#define SDREADER_CS 5
+
+extern SemaphoreHandle_t spiMutex;
 extern const char *FAVORITES_FOLDER;
 extern uint8_t _playerVolume;
 extern playList_t playList;
@@ -33,6 +37,7 @@ struct serverMessage
 {
     enum type
     {
+        WS_LIST_FOLDER,
         WS_UPDATE_STATION,
         WS_UPDATE_STREAMTITLE,
         WS_UPDATE_NOWPLAYING,

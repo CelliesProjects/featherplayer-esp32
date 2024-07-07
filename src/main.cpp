@@ -1,7 +1,6 @@
 #include <Arduino.h>
 #include <WiFi.h>
 #include <FS.h>
-#include <SD.h>
 
 #include "websocketEventHandler.h"
 #include "icons.h"
@@ -21,46 +20,12 @@ QueueHandle_t tftQueue = nullptr;
 QueueHandle_t playerQueue = nullptr;
 QueueHandle_t serverQueue = nullptr;
 
-void mountSDcard()
-{
-    if (!SD.begin(SDREADER_CS))
-    {
-        log_e("Card Mount Failed");
-        return;
-    }
-    uint8_t cardType = SD.cardType();
-
-    if (cardType == CARD_NONE)
-    {
-        log_e("No SD card attached");
-        return;
-    }
-
-    log_i("SD Card Type: ");
-    if (cardType == CARD_MMC)
-    {
-        log_i("MMC");
-    }
-    else if (cardType == CARD_SD)
-    {
-        log_i("SDSC");
-    }
-    else if (cardType == CARD_SDHC)
-    {
-        log_i("SDHC");
-    }
-    else
-    {
-        log_i("UNKNOWN");
-    }
-
-    uint64_t cardSize = SD.cardSize() / (1024 * 1024);
-    log_i("SD Card Size: %lluMB\n", cardSize);
-}
-
 void setup()
 {
     Serial.begin(115200);
+
+    while (!Serial){}   //comment out for production!
+
     log_i("ESP32 IDF Version %d.%d.%d", ESP_IDF_VERSION_MAJOR, ESP_IDF_VERSION_MINOR, ESP_IDF_VERSION_PATCH);
     log_i("ESP32 Arduino Version %d.%d.%d", ESP_ARDUINO_VERSION_MAJOR, ESP_ARDUINO_VERSION_MINOR, ESP_ARDUINO_VERSION_PATCH);
     log_i("CPU: %iMhz", getCpuFrequencyMhz());
@@ -78,10 +43,6 @@ void setup()
         while (1)
             delay(100);
     }
-
-    xSemaphoreTake(spiMutex, portMAX_DELAY);
-    mountSDcard();
-    xSemaphoreGive(spiMutex);
 
     tftQueue = xQueueCreate(5, sizeof(struct tftMessage));
     if (!tftQueue)
@@ -195,7 +156,7 @@ void setup()
         "playerTask",
         6144,
         NULL,
-        tskIDLE_PRIORITY + 10,
+        tskIDLE_PRIORITY + 15,
         NULL);
 
     if (taskResult != pdPASS)
@@ -210,7 +171,7 @@ void setup()
         "serverTask",
         4096,
         NULL,
-        tskIDLE_PRIORITY + 15,
+        tskIDLE_PRIORITY + 10,
         NULL);
 
     if (taskResult != pdPASS)

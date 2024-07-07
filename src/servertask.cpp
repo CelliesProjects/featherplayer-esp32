@@ -1,5 +1,42 @@
 #include "servertask.h"
 
+static void mountSDcard()
+{
+    if (!SD.begin(SDREADER_CS))
+    {
+        log_e("Card Mount Failed");
+        return;
+    }
+    uint8_t cardType = SD.cardType();
+
+    if (cardType == CARD_NONE)
+    {
+        log_e("No SD card attached");
+        return;
+    }
+
+    log_i("SD Card Type: ");
+    if (cardType == CARD_MMC)
+    {
+        log_i("MMC");
+    }
+    else if (cardType == CARD_SD)
+    {
+        log_i("SDSC");
+    }
+    else if (cardType == CARD_SDHC)
+    {
+        log_i("SDHC");
+    }
+    else
+    {
+        log_i("UNKNOWN");
+    }
+
+    uint64_t cardSize = SD.cardSize() / (1024 * 1024);
+    log_i("SD Card Size: %lluMB\n", cardSize);
+}
+
 static const char *HEADER_MODIFIED_SINCE = "If-Modified-Since";
 
 static inline __attribute__((always_inline)) bool htmlUnmodified(const AsyncWebServerRequest *request, const char *date)
@@ -213,6 +250,10 @@ void callbackSetup(AsyncWebServer &server)
 
 void serverTask(void *parameter)
 {
+    xSemaphoreTake(spiMutex, portMAX_DELAY);
+    mountSDcard();
+    xSemaphoreGive(spiMutex);
+
     static AsyncWebServer server(80);
     static AsyncWebSocket ws("/ws");
 
@@ -221,6 +262,12 @@ void serverTask(void *parameter)
     ws.onEvent(websocketEventHandler);
     server.addHandler(&ws);
 
+    // test: add a command to the server queue to show a folder
+    serverMessage msg;
+    snprintf(msg.str, sizeof(msg.str), "/De Jeugd van Tegenwoordig/Parels Voor De Zwijnen");
+    msg.type = serverMessage::WS_LIST_FOLDER;
+    xQueueSend(serverQueue, &msg, portMAX_DELAY);
+
     while (1)
     {
         static serverMessage msg{};
@@ -228,6 +275,48 @@ void serverTask(void *parameter)
         {
             switch (msg.type)
             {
+            case serverMessage::WS_LIST_FOLDER:
+            {
+                xSemaphoreTake(spiMutex, portMAX_DELAY);
+                File folder = SD.open(msg.str);
+                xSemaphoreGive(spiMutex);
+
+                if (!folder || !folder.isDirectory())
+                {
+                    log_e("No folder %s found", msg.str);
+                    break;
+                }
+
+                xSemaphoreTake(spiMutex, portMAX_DELAY);
+                File file = folder.openNextFile();
+                xSemaphoreGive(spiMutex);
+
+                const auto START = millis();
+                auto cnt = 0;
+                //auto avg = 0;
+                //auto avgWait = 0;
+                log_i("starting file loop");
+                ws.printf(msg.value, "files-%s\n", msg.str);
+                while (file)
+                {
+                    log_i("name: %s", file.name());
+                    ws.printf(msg.value, "%s\n", file.name());
+
+                    //const auto START_LOCK = millis();
+                    xSemaphoreTake(spiMutex, portMAX_DELAY);
+                    //const auto LOCK_READY = millis();
+                    //avgWait += LOCK_READY - START_LOCK;
+                    file = folder.openNextFile();
+                    xSemaphoreGive(spiMutex);
+                    //avg += millis() - START_LOCK;
+                    cnt++;
+                }
+                log_d("locked avg for %i ms", avg / cnt);
+                log_d("avg wait time was %i ms", avgWait / cnt);
+                log_i("scanned %i files in %i ms", cnt, millis() - START);
+            }
+            break;
+
             case serverMessage::WS_UPDATE_NOWPLAYING:
                 ws.textAll(currentPlayingItem());
                 break;
