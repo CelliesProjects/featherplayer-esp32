@@ -264,7 +264,9 @@ void serverTask(void *parameter)
 
     // test: add a command to the server queue to show a folder
     serverMessage msg;
-    snprintf(msg.str, sizeof(msg.str), "/De Jeugd van Tegenwoordig/Parels Voor De Zwijnen");
+    // snprintf(msg.str, sizeof(msg.str), "/De Jeugd van Tegenwoordig/Parels Voor De Zwijnen");
+    //  snprintf(msg.str, sizeof(msg.str), "/allentoussaint");
+    snprintf(msg.str, sizeof(msg.str), "/");
     msg.type = serverMessage::WS_LIST_FOLDER;
     xQueueSend(serverQueue, &msg, portMAX_DELAY);
 
@@ -287,30 +289,31 @@ void serverTask(void *parameter)
                     break;
                 }
 
+                String filename;
+                bool isDir = false;
                 xSemaphoreTake(spiMutex, portMAX_DELAY);
-                File file = folder.openNextFile();
+                filename = folder.getNextFileName(&isDir);
                 xSemaphoreGive(spiMutex);
 
                 const auto START = millis();
                 auto cnt = 0;
-                //auto avg = 0;
-                //auto avgWait = 0;
                 log_i("starting file loop");
-                ws.printf(msg.value, "files-%s\n", msg.str);
-                while (file)
+                String response = "files-";
+                response.concat(msg.str);
+                response.concat("\n");
+                while (filename != "")
                 {
-                    log_i("name: %s", file.name());
-                    ws.printf(msg.value, "%s\n", file.name());
-
-                    //const auto START_LOCK = millis();
-                    xSemaphoreTake(spiMutex, portMAX_DELAY);
-                    //const auto LOCK_READY = millis();
-                    //avgWait += LOCK_READY - START_LOCK;
-                    file = folder.openNextFile();
-                    xSemaphoreGive(spiMutex);
-                    //avg += millis() - START_LOCK;
+                    log_d("name: %s", filename);
                     cnt++;
+                    response.concat(isDir ? "_Folder " : "_File ");
+                    response.concat(filename.substring(filename.lastIndexOf('/') + 1));
+                    response.concat("\n");
+                    xSemaphoreTake(spiMutex, portMAX_DELAY);
+                    filename = folder.getNextFileName(&isDir); // https://github.com/espressif/arduino-esp32/pull/7229
+                    xSemaphoreGive(spiMutex);
                 }
+                ws.printf(msg.value, response.c_str());
+                log_i("response: %s", response.c_str());
                 log_d("locked avg for %i ms", avg / cnt);
                 log_d("avg wait time was %i ms", avgWait / cnt);
                 log_i("scanned %i files in %i ms", cnt, millis() - START);
