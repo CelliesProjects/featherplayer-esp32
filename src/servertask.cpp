@@ -2,7 +2,7 @@
 
 static void mountSDcard()
 {
-    if (!SD.begin(SDREADER_CS))
+    if (!SD.begin(SDREADER_CS, SPI, 20000000))
     {
         log_e("Card Mount Failed");
         return;
@@ -264,8 +264,9 @@ void serverTask(void *parameter)
 
     // test: add a command to the server queue to show a folder
     serverMessage msg;
+    // snprintf(msg.str, sizeof(msg.str), "/De Jeugd van Tegenwoordig");
     // snprintf(msg.str, sizeof(msg.str), "/De Jeugd van Tegenwoordig/Parels Voor De Zwijnen");
-    //  snprintf(msg.str, sizeof(msg.str), "/allentoussaint");
+    //   snprintf(msg.str, sizeof(msg.str), "/allentoussaint");
     snprintf(msg.str, sizeof(msg.str), "/");
     msg.type = serverMessage::WS_LIST_FOLDER;
     xQueueSend(serverQueue, &msg, portMAX_DELAY);
@@ -306,16 +307,39 @@ void serverTask(void *parameter)
                     log_d("name: %s", filename);
                     cnt++;
                     response.concat(isDir ? "_Folder " : "_File ");
+                    // check of er in de folder iets afspeelbaars staat
+                    // en laat ADDFOLDER_ICON en START_ICON zien voor de filename
+                    // het path gaat naar de www-data dingetje
+                    bool foundPlayable = false;
+                    if (isDir)
+                    {
+                        xSemaphoreTake(spiMutex, portMAX_DELAY);
+                        File folder = SD.open(filename);
+                        xSemaphoreGive(spiMutex);
+
+                        String maybePlayabe;
+                        xSemaphoreTake(spiMutex, portMAX_DELAY);
+                        maybePlayabe = folder.getNextFileName(&isDir); // https://github.com/espressif/arduino-esp32/pull/7229
+                        xSemaphoreGive(spiMutex);
+
+                        while (maybePlayabe != "" && !foundPlayable)
+                        {
+                            foundPlayable =
+                                (!isDir) && (maybePlayabe.endsWith(".mp3") || maybePlayabe.endsWith(".ogg")) ? true : false;
+                            xSemaphoreTake(spiMutex, portMAX_DELAY);
+                            maybePlayabe = folder.getNextFileName(&isDir);
+                            xSemaphoreGive(spiMutex);
+                        }
+                        log_d("folder %s %s contain playable files", filename.c_str(), foundPlayable ? "does" : "does not");
+                    }
                     response.concat(filename.substring(filename.lastIndexOf('/') + 1));
                     response.concat("\n");
                     xSemaphoreTake(spiMutex, portMAX_DELAY);
-                    filename = folder.getNextFileName(&isDir); // https://github.com/espressif/arduino-esp32/pull/7229
+                    filename = folder.getNextFileName(&isDir);
                     xSemaphoreGive(spiMutex);
                 }
                 ws.printf(msg.value, response.c_str());
-                log_i("response: %s", response.c_str());
-                log_d("locked avg for %i ms", avg / cnt);
-                log_d("avg wait time was %i ms", avgWait / cnt);
+                log_d("response: %s", response.c_str());
                 log_i("scanned %i files in %i ms", cnt, millis() - START);
             }
             break;
