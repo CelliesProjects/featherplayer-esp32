@@ -248,6 +248,84 @@ void callbackSetup(AsyncWebServer &server)
     DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
 }
 
+static void sendFolderWS(File &folder, const serverMessage &msg, AsyncWebSocket &ws)
+{
+    if (!folder)
+        return;
+    log_i("folder scan '%s'", folder.name());
+    const auto START = millis();
+    String filename;
+    bool isDir = false;
+    xSemaphoreTake(spiMutex, portMAX_DELAY);
+    filename = folder.getNextFileName(&isDir);
+    xSemaphoreGive(spiMutex);
+
+    auto cnt = 0;
+    String response = "files-";
+    response.concat(msg.str);
+    response.concat("\n");
+    while (filename != "")
+    {
+        log_d("name: %s", filename);
+        cnt++;
+        bool isPlayable = false;
+        if (isDir)
+        {
+            // check of er in de folder iets afspeelbaars staat
+            // en laat ADDFOLDER_ICON en START_ICON zien voor de filename als dat het geval is
+            // het path gaat naar de www-data dingetje
+            xSemaphoreTake(spiMutex, portMAX_DELAY);
+            File innerFolder = SD.open(filename);
+            xSemaphoreGive(spiMutex);
+
+            if (!innerFolder)
+            {
+                log_e("something went wrong scanning %s", filename);
+                return;
+            }
+
+            String current;
+            bool innerIsDir = false;
+            xSemaphoreTake(spiMutex, portMAX_DELAY);
+            current = innerFolder.getNextFileName(&innerIsDir); // https://github.com/espressif/arduino-esp32/pull/7229
+            xSemaphoreGive(spiMutex);
+
+            while (current != "" /*&& !isPlayable*/)
+            {
+                current.toLowerCase();
+                isPlayable = !innerIsDir &&
+                             (current.endsWith(".mp3") || current.endsWith(".ogg"));
+                if (isPlayable)
+                    break;
+                xSemaphoreTake(spiMutex, portMAX_DELAY);
+                current = innerFolder.getNextFileName(&innerIsDir);
+                xSemaphoreGive(spiMutex);
+            }
+            log_d("folder %s %s contain playable files", filename.c_str(), isPlayable ? "does" : "does not");
+        }
+
+        String test = "";
+        if (!isDir && filename.length() > 4)
+        {
+            test = filename.substring(filename.length() - 4);
+            test.toLowerCase();
+        }
+        if (isDir || test.equals(".mp3") || test.equals(".ogg"))
+        {
+            response.concat((isDir && isPlayable) ? "P " : "  ");
+            response.concat(filename.substring(filename.lastIndexOf('/') + 1));
+            response.concat("\n");
+        }
+        xSemaphoreTake(spiMutex, portMAX_DELAY);
+        filename = folder.getNextFileName(&isDir);
+        xSemaphoreGive(spiMutex);
+    }
+    log_i("scanned %i files in %i ms", cnt, millis() - START);
+    log_d("response: %s", response.c_str());
+
+    ws.text(msg.value, response.c_str());
+}
+
 void serverTask(void *parameter)
 {
     xSemaphoreTake(spiMutex, portMAX_DELAY);
@@ -264,10 +342,10 @@ void serverTask(void *parameter)
 
     // test: add a command to the server queue to show a folder
     serverMessage msg;
-    // snprintf(msg.str, sizeof(msg.str), "/De Jeugd van Tegenwoordig");
-    // snprintf(msg.str, sizeof(msg.str), "/De Jeugd van Tegenwoordig/Parels Voor De Zwijnen");
+    // snprintf(msg.str, sizeof(msg.str), "/Front 242");
+    snprintf(msg.str, sizeof(msg.str), "/De Jeugd van Tegenwoordig/Parels Voor De Zwijnen");
     //   snprintf(msg.str, sizeof(msg.str), "/allentoussaint");
-    snprintf(msg.str, sizeof(msg.str), "/");
+    // snprintf(msg.str, sizeof(msg.str), "/");
     msg.type = serverMessage::WS_LIST_FOLDER;
     xQueueSend(serverQueue, &msg, portMAX_DELAY);
 
@@ -283,63 +361,12 @@ void serverTask(void *parameter)
                 xSemaphoreTake(spiMutex, portMAX_DELAY);
                 File folder = SD.open(msg.str);
                 xSemaphoreGive(spiMutex);
-
                 if (!folder || !folder.isDirectory())
                 {
-                    log_e("No folder %s found", msg.str);
+                    log_e("%s not found", msg.str);
                     break;
                 }
-
-                String filename;
-                bool isDir = false;
-                xSemaphoreTake(spiMutex, portMAX_DELAY);
-                filename = folder.getNextFileName(&isDir);
-                xSemaphoreGive(spiMutex);
-
-                const auto START = millis();
-                auto cnt = 0;
-                log_i("starting file loop");
-                String response = "files-";
-                response.concat(msg.str);
-                response.concat("\n");
-                while (filename != "")
-                {
-                    log_d("name: %s", filename);
-                    cnt++;
-                    bool foundPlayable = false;
-                    if (isDir)
-                    {
-                        // check of er in de folder iets afspeelbaars staat
-                        // en laat ADDFOLDER_ICON en START_ICON zien voor de filename
-                        // het path gaat naar de www-data dingetje
-                        xSemaphoreTake(spiMutex, portMAX_DELAY);
-                        File folder = SD.open(filename);
-                        xSemaphoreGive(spiMutex);
-
-                        String maybePlayabe;
-                        xSemaphoreTake(spiMutex, portMAX_DELAY);
-                        maybePlayabe = folder.getNextFileName(&isDir); // https://github.com/espressif/arduino-esp32/pull/7229
-                        xSemaphoreGive(spiMutex);
-
-                        while (maybePlayabe != "" && !foundPlayable)
-                        {
-                            foundPlayable =
-                                (!isDir) && (maybePlayabe.endsWith(".mp3") || maybePlayabe.endsWith(".ogg")) ? true : false;
-                            xSemaphoreTake(spiMutex, portMAX_DELAY);
-                            maybePlayabe = folder.getNextFileName(&isDir);
-                            xSemaphoreGive(spiMutex);
-                        }
-                        log_d("folder %s %s contain playable files", filename.c_str(), foundPlayable ? "does" : "does not");
-                    }
-                    response.concat(filename.substring(filename.lastIndexOf('/') + 1));
-                    response.concat("\n");
-                    xSemaphoreTake(spiMutex, portMAX_DELAY);
-                    filename = folder.getNextFileName(&isDir);
-                    xSemaphoreGive(spiMutex);
-                }
-                ws.printf(msg.value, response.c_str());
-                log_d("response: %s", response.c_str());
-                log_i("scanned %i files in %i ms", cnt, millis() - START);
+                sendFolderWS(folder, msg, ws);
             }
             break;
 
