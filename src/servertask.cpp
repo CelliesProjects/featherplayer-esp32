@@ -306,13 +306,12 @@ void serverTask(void *parameter)
                 {
                     log_d("name: %s", filename);
                     cnt++;
-                    response.concat(isDir ? "_Folder " : "_File ");
-                    // check of er in de folder iets afspeelbaars staat
-                    // en laat ADDFOLDER_ICON en START_ICON zien voor de filename
-                    // het path gaat naar de www-data dingetje
                     bool foundPlayable = false;
                     if (isDir)
                     {
+                        // check of er in de folder iets afspeelbaars staat
+                        // en laat ADDFOLDER_ICON en START_ICON zien voor de filename
+                        // het path gaat naar de www-data dingetje
                         xSemaphoreTake(spiMutex, portMAX_DELAY);
                         File folder = SD.open(filename);
                         xSemaphoreGive(spiMutex);
