@@ -17,21 +17,13 @@ static void mountSDcard()
 
     log_i("SD Card Type: ");
     if (cardType == CARD_MMC)
-    {
         log_i("MMC");
-    }
     else if (cardType == CARD_SD)
-    {
         log_i("SDSC");
-    }
     else if (cardType == CARD_SDHC)
-    {
         log_i("SDHC");
-    }
     else
-    {
         log_i("UNKNOWN");
-    }
 
     uint64_t cardSize = SD.cardSize() / (1024 * 1024);
     log_i("SD Card Size: %lluMB\n", cardSize);
@@ -252,7 +244,7 @@ static void sendFolderWS(File &folder, const serverMessage &msg, AsyncWebSocket 
 {
     if (!folder)
         return;
-    log_i("folder scan '%s'", folder.name());
+    log_i("folder scan '%s'", msg.str);
     const auto START = millis();
     String filename;
     bool isDir = false;
@@ -281,6 +273,7 @@ static void sendFolderWS(File &folder, const serverMessage &msg, AsyncWebSocket 
             if (!innerFolder)
             {
                 log_e("something went wrong scanning %s", filename);
+                // send some form of error message to the ws client
                 return;
             }
 
@@ -290,27 +283,23 @@ static void sendFolderWS(File &folder, const serverMessage &msg, AsyncWebSocket 
             current = innerFolder.getNextFileName(&innerIsDir); // https://github.com/espressif/arduino-esp32/pull/7229
             xSemaphoreGive(spiMutex);
 
-            while (current != "" /*&& !isPlayable*/)
+            while (current != "" && !isPlayable)
             {
                 current.toLowerCase();
                 isPlayable = !innerIsDir &&
                              (current.endsWith(".mp3") || current.endsWith(".ogg"));
-                if (isPlayable)
-                    break;
                 xSemaphoreTake(spiMutex, portMAX_DELAY);
                 current = innerFolder.getNextFileName(&innerIsDir);
                 xSemaphoreGive(spiMutex);
             }
-            log_d("folder %s %s contain playable files", filename.c_str(), isPlayable ? "does" : "does not");
+            innerFolder.close();
         }
 
         String test = "";
         if (!isDir && filename.length() > 4)
-        {
             test = filename.substring(filename.length() - 4);
-            test.toLowerCase();
-        }
-        if (isDir || test.equals(".mp3") || test.equals(".ogg"))
+
+        if (isDir || test.equalsIgnoreCase(".mp3") || test.equalsIgnoreCase(".ogg"))
         {
             response.concat((isDir && isPlayable) ? "P " : "  ");
             response.concat(filename.substring(filename.lastIndexOf('/') + 1));
@@ -343,9 +332,9 @@ void serverTask(void *parameter)
     // test: add a command to the server queue to show a folder
     serverMessage msg;
     // snprintf(msg.str, sizeof(msg.str), "/Front 242");
-    snprintf(msg.str, sizeof(msg.str), "/De Jeugd van Tegenwoordig/Parels Voor De Zwijnen");
-    //   snprintf(msg.str, sizeof(msg.str), "/allentoussaint");
-    // snprintf(msg.str, sizeof(msg.str), "/");
+    //  snprintf(msg.str, sizeof(msg.str), "/De Jeugd van Tegenwoordig/Parels Voor De Zwijnen");
+    //     snprintf(msg.str, sizeof(msg.str), "/allentoussaint");
+    snprintf(msg.str, sizeof(msg.str), "/");
     msg.type = serverMessage::WS_LIST_FOLDER;
     xQueueSend(serverQueue, &msg, portMAX_DELAY);
 
@@ -363,10 +352,11 @@ void serverTask(void *parameter)
                 xSemaphoreGive(spiMutex);
                 if (!folder || !folder.isDirectory())
                 {
-                    log_e("%s not found", msg.str);
+                    log_e("%s not found or no directory", msg.str);
                     break;
                 }
                 sendFolderWS(folder, msg, ws);
+                folder.close();
             }
             break;
 
