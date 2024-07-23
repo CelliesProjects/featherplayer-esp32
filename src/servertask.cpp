@@ -256,6 +256,13 @@ static void sendFolderWS(File &folder, const serverMessage &msg, AsyncWebSocket 
     String response = "files-";
     response.concat(msg.str);
     response.concat("\n");
+
+    // add a go-to-upper-dir-link
+    const char *goUpItem = R"=====(<div id="uplink"><svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0V0z"></path><path d="M11 9l1.42 1.42L8.83 14H18V4h2v12H8.83l3.59 3.58L11 21l-6-6 6-6z"></path></svg></div>)=====";
+    response.concat(goUpItem);
+
+    response.concat("\n\n\n"); // TODO : REMOVE
+
     while (filename != "")
     {
         log_d("name: %s", filename);
@@ -263,9 +270,6 @@ static void sendFolderWS(File &folder, const serverMessage &msg, AsyncWebSocket 
         bool isPlayable = false;
         if (isDir)
         {
-            // check of er in de folder iets afspeelbaars staat
-            // en laat ADDFOLDER_ICON en START_ICON zien voor de filename als dat het geval is
-            // het path gaat naar de www-data dingetje
             xSemaphoreTake(spiMutex, portMAX_DELAY);
             File innerFolder = SD.open(filename);
             xSemaphoreGive(spiMutex);
@@ -276,6 +280,8 @@ static void sendFolderWS(File &folder, const serverMessage &msg, AsyncWebSocket 
                 // send some form of error message to the ws client
                 return;
             }
+
+            // folder exists and contains something
 
             String current;
             bool innerIsDir = false;
@@ -295,22 +301,46 @@ static void sendFolderWS(File &folder, const serverMessage &msg, AsyncWebSocket 
             innerFolder.close();
         }
 
+        // check of er in de folder iets afspeelbaars staat
+        // en laat ADDFOLDER_ICON en START_ICON zien voor de filename als dat het geval is
+        // en anders 2 keer een emptyicon
+        // het path gaat naar de www-data dingetje
+
+        // DOE DE FOLDERS SEPERATE VAN DE AFSPEELBARE BESTANDEN
+        if (isDir)
+        {
+            response.concat("<div class=\"folderlink\">");
+            response.concat(isPlayable ? addfoldericon : emptyicon);
+            response.concat(isPlayable ? starticon : emptyicon);
+            response.concat("<span class=\"text\">");
+            response.concat(filename.substring(filename.lastIndexOf('/') + 1));
+            response.concat("</span></div>");
+            response.concat("\n\n\n"); // TODO: REMOVE!
+        }
+
         String test = "";
         if (!isDir && filename.length() > 4)
             test = filename.substring(filename.length() - 4);
 
-        if (isDir || test.equalsIgnoreCase(".mp3") || test.equalsIgnoreCase(".ogg"))
+        if (!isDir && (test.equalsIgnoreCase(".mp3") || test.equalsIgnoreCase(".ogg")))
         {
-            response.concat((isDir && isPlayable) ? "P " : "  ");
+            const char *playableItemIcon = R"=====(<svg class="icon" xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24"><path d="M0 0h24v24H0z" fill="none"></path><path d="M12 3v9.28c-.47-.17-.97-.28-1.5-.28C8.01 12 6 14.01 6 16.5S8.01 21 10.5 21c2.31 0 4.2-1.75 4.45-4H15V6h4V3h-7z"></path></svg>)=====";
+            const char *startItemNowIcon = R"=====(<img src="/starticon.svg" class="icon starticon">)=====";
+            response.concat("<div id=\"filelink\">");
+            response.concat(playableItemIcon);
+            response.concat(startItemNowIcon);
+            response.concat("<span class=\"text\"");
             response.concat(filename.substring(filename.lastIndexOf('/') + 1));
-            response.concat("\n");
+            response.concat("</span></div>");
+            response.concat("\n\n\n"); // TODO: REMOVE!
         }
+
         xSemaphoreTake(spiMutex, portMAX_DELAY);
         filename = folder.getNextFileName(&isDir);
         xSemaphoreGive(spiMutex);
     }
     log_i("scanned %i files in %i ms", cnt, millis() - START);
-    log_d("response: %s", response.c_str());
+    log_i("response: %s", response.c_str());
 
     ws.text(msg.value, response.c_str());
 }
@@ -331,10 +361,11 @@ void serverTask(void *parameter)
 
     // test: add a command to the server queue to show a folder
     serverMessage msg;
-    // snprintf(msg.str, sizeof(msg.str), "/Front 242");
+//    snprintf(msg.str, sizeof(msg.str), "/Front 242");
+    snprintf(msg.str, sizeof(msg.str), "/DJ sets");
     //  snprintf(msg.str, sizeof(msg.str), "/De Jeugd van Tegenwoordig/Parels Voor De Zwijnen");
     //     snprintf(msg.str, sizeof(msg.str), "/allentoussaint");
-    snprintf(msg.str, sizeof(msg.str), "/");
+    // snprintf(msg.str, sizeof(msg.str), "/");
     msg.type = serverMessage::WS_LIST_FOLDER;
     xQueueSend(serverQueue, &msg, portMAX_DELAY);
 
@@ -350,11 +381,18 @@ void serverTask(void *parameter)
                 xSemaphoreTake(spiMutex, portMAX_DELAY);
                 File folder = SD.open(msg.str);
                 xSemaphoreGive(spiMutex);
-                if (!folder || !folder.isDirectory())
+                if (!folder)
                 {
-                    log_e("%s not found or no directory", msg.str);
+                    log_e("%s not found", msg.str);
                     break;
                 }
+                if (!folder.isDirectory())
+                {
+                    log_e("%s is no directory", msg.str);
+                    folder.close();
+                    return;
+                }
+
                 sendFolderWS(folder, msg, ws);
                 folder.close();
             }
