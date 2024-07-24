@@ -245,6 +245,8 @@ static void sendFolderWS(File &folder, const serverMessage &msg, AsyncWebSocket 
     if (!folder)
         return;
     log_i("folder scan '%s'", msg.str);
+    log_d("folder name: %s", folder.name());
+    log_d("folder path: %s", folder.path());
     const auto START = millis();
     String filename;
     bool isDir = false;
@@ -256,12 +258,6 @@ static void sendFolderWS(File &folder, const serverMessage &msg, AsyncWebSocket 
     String response = "files-";
     response.concat(msg.str);
     response.concat("\n");
-
-    // add a go-to-upper-dir-link
-    const char *goUpItem = R"=====(<div id="uplink"><svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0V0z"></path><path d="M11 9l1.42 1.42L8.83 14H18V4h2v12H8.83l3.59 3.58L11 21l-6-6 6-6z"></path></svg></div>)=====";
-    response.concat(goUpItem);
-
-    response.concat("\n\n\n"); // TODO : REMOVE
 
     while (filename != "")
     {
@@ -278,10 +274,9 @@ static void sendFolderWS(File &folder, const serverMessage &msg, AsyncWebSocket 
             {
                 log_e("something went wrong scanning %s", filename);
                 // send some form of error message to the ws client
+                folder.close();
                 return;
             }
-
-            // folder exists and contains something
 
             String current;
             bool innerIsDir = false;
@@ -301,21 +296,13 @@ static void sendFolderWS(File &folder, const serverMessage &msg, AsyncWebSocket 
             innerFolder.close();
         }
 
-        // check of er in de folder iets afspeelbaars staat
-        // en laat ADDFOLDER_ICON en START_ICON zien voor de filename als dat het geval is
-        // en anders 2 keer een emptyicon
-        // het path gaat naar de www-data dingetje
+        // zie: https://developer.mozilla.org/en-US/docs/Web/API/HTMLElement/dataset
 
-        // DOE DE FOLDERS SEPERATE VAN DE AFSPEELBARE BESTANDEN
         if (isDir)
         {
-            response.concat("<div class=\"folderlink\">");
-            response.concat(isPlayable ? addfoldericon : emptyicon);
-            response.concat(isPlayable ? starticon : emptyicon);
-            response.concat("<span class=\"text\">");
+            response.concat(isPlayable ? "playable\n" : "folder\n");
             response.concat(filename.substring(filename.lastIndexOf('/') + 1));
-            response.concat("</span></div>");
-            response.concat("\n\n\n"); // TODO: REMOVE!
+            response.concat("\n");
         }
 
         String test = "";
@@ -324,25 +311,21 @@ static void sendFolderWS(File &folder, const serverMessage &msg, AsyncWebSocket 
 
         if (!isDir && (test.equalsIgnoreCase(".mp3") || test.equalsIgnoreCase(".ogg")))
         {
-            const char *playableItemIcon = R"=====(<svg class="icon" xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24"><path d="M0 0h24v24H0z" fill="none"></path><path d="M12 3v9.28c-.47-.17-.97-.28-1.5-.28C8.01 12 6 14.01 6 16.5S8.01 21 10.5 21c2.31 0 4.2-1.75 4.45-4H15V6h4V3h-7z"></path></svg>)=====";
-            const char *startItemNowIcon = R"=====(<img src="/starticon.svg" class="icon starticon">)=====";
-            response.concat("<div id=\"filelink\">");
-            response.concat(playableItemIcon);
-            response.concat(startItemNowIcon);
-            response.concat("<span class=\"text\"");
+            response.concat("file\n");
             response.concat(filename.substring(filename.lastIndexOf('/') + 1));
-            response.concat("</span></div>");
-            response.concat("\n\n\n"); // TODO: REMOVE!
+            response.concat("\n");
         }
 
         xSemaphoreTake(spiMutex, portMAX_DELAY);
         filename = folder.getNextFileName(&isDir);
         xSemaphoreGive(spiMutex);
     }
-    log_i("scanned %i files in %i ms", cnt, millis() - START);
-    log_i("response: %s", response.c_str());
 
-    ws.text(msg.value, response.c_str());
+    log_i("scanned %i files in %i ms", cnt, millis() - START);
+    log_d("response: %s", response.c_str());
+    log_i("response size: %i", response.length());
+
+    // ws.text(msg.value, response.c_str());
 }
 
 void serverTask(void *parameter)
@@ -361,11 +344,11 @@ void serverTask(void *parameter)
 
     // test: add a command to the server queue to show a folder
     serverMessage msg;
-//    snprintf(msg.str, sizeof(msg.str), "/Front 242");
-    snprintf(msg.str, sizeof(msg.str), "/DJ sets");
-    //  snprintf(msg.str, sizeof(msg.str), "/De Jeugd van Tegenwoordig/Parels Voor De Zwijnen");
-    //     snprintf(msg.str, sizeof(msg.str), "/allentoussaint");
-    // snprintf(msg.str, sizeof(msg.str), "/");
+    snprintf(msg.str, sizeof(msg.str), "/Front 242");
+    //  snprintf(msg.str, sizeof(msg.str), "/DJ sets");
+    //    snprintf(msg.str, sizeof(msg.str), "/De Jeugd van Tegenwoordig/Parels Voor De Zwijnen");
+    //       snprintf(msg.str, sizeof(msg.str), "/allentoussaint");
+    //snprintf(msg.str, sizeof(msg.str), "/");
     msg.type = serverMessage::WS_LIST_FOLDER;
     xQueueSend(serverQueue, &msg, portMAX_DELAY);
 
@@ -384,6 +367,7 @@ void serverTask(void *parameter)
                 if (!folder)
                 {
                     log_e("%s not found", msg.str);
+                    /// send some kind of error to ws client
                     break;
                 }
                 if (!folder.isDirectory())
