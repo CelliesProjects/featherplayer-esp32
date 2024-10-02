@@ -8,9 +8,10 @@ combined with a
 
 ## What is it?
 
-A web-based esp32 music player for mp3/ogg/aac/aac+ webradio and files from a sdcard.<br>Sound output comes from a VS1053 mp3/aac/ogg/wav decoder board.
+A web-based esp32 music player for mp3/ogg/aac/aac+ webradio, local music files and <strike>files from a sdcard</strike>.<br>Sound output comes from a VS1053 mp3/aac/ogg/wav decoder board.
 
-- Supports http, https (insecure mode)/chunked streams.<br>
+- Supports http, https (insecure mode) and chunked streams.<br>
+- Plays files from local network.
 - <strike>Plays local files from a mounted filesystem.&nbsp;</strike>Working on it.<br>
 - Search for web radio stations on [radio-browser](https://www.radio-browser.info/).
 - Save found radio stations to your favorites.
@@ -43,7 +44,7 @@ git clone https://github.com/CelliesProjects/featherplayer-esp32
 - Use `File->Open folder` in Visual Studio and then browse to the folder where you cloned the project to.
 - Press `Select` and the project will be opened and initialized, this will take some time while all assets are downloaded.
 
-## Before compiling: add your WiFi credentials
+## Add your WiFi credentials
 
 Before compiling the project add the file `include/WiFicredentials.h` to supply your WiFi credentials:
 
@@ -57,7 +58,15 @@ const char *PSK = "your wifi password";
 #endif
 ```
 
-That's it. Now you are ready to compile the project!
+### Local file playback
+
+This player is written for playback over http(s).<br>What this means is that you will need a (lamp or llmp) webserver to play back your local files.<br>This is because the esp32 does not speak NFS or SMB which are common ways to share files over a network. Instead this player uses a php script on the server to navigate the music folders. Copy this script to the server to use your music library.<br>**This is totally insecure and should only be used on a trusted LAN!** 
+
+The script `eSP32_vs1053.php` is located in the root of this repository.<br>The scipt is tested with Apache 2.x and lighttpd.
+
+## Done!
+
+That's it. Now you are ready to compile and flash the player!
 
 ## About this project
 
