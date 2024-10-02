@@ -58,7 +58,7 @@ const char *PSK = "your wifi password";
 #endif
 ```
 
-### Local file playback
+## Local file playback
 
 This player is written for playback over http(s).<br>What this means is that you will need a (lamp or llmp) webserver to play back your local files.<br>This is because the esp32 does not speak NFS or SMB which are common ways to share files over a network. Instead this player uses a php script on the server to navigate the music folders. Copy this script to the server to use your music library.<br>**This is totally insecure and should only be used on a trusted LAN!** 
 
