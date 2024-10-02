@@ -1,5 +1,34 @@
 #include "servertask.h"
 
+static void mountSDcard()
+{
+    if (!SD.begin(SDREADER_CS, SPI, 20000000))
+    {
+        log_e("Card Mount Failed");
+        return;
+    }
+    uint8_t cardType = SD.cardType();
+
+    if (cardType == CARD_NONE)
+    {
+        log_e("No SD card attached");
+        return;
+    }
+
+    log_i("SD Card Type: ");
+    if (cardType == CARD_MMC)
+        log_i("MMC");
+    else if (cardType == CARD_SD)
+        log_i("SDSC");
+    else if (cardType == CARD_SDHC)
+        log_i("SDHC");
+    else
+        log_i("UNKNOWN");
+
+    uint64_t cardSize = SD.cardSize() / (1024 * 1024);
+    log_i("SD Card Size: %lluMB\n", cardSize);
+}
+
 static const char *HEADER_MODIFIED_SINCE = "If-Modified-Since";
 
 static inline __attribute__((always_inline)) bool htmlUnmodified(const AsyncWebServerRequest *request, const char *date)
@@ -211,8 +240,100 @@ void callbackSetup(AsyncWebServer &server)
     DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
 }
 
+static void sendFolderWS(File &folder, const serverMessage &msg, AsyncWebSocket &ws)
+{
+    if (!folder)
+        return;
+    log_i("folder scan '%s'", msg.str);
+    log_d("folder name: %s", folder.name());
+    log_d("folder path: %s", folder.path());
+    const auto START = millis();
+    String filename;
+    bool isDir = false;
+    xSemaphoreTake(spiMutex, portMAX_DELAY);
+    filename = folder.getNextFileName(&isDir);
+    xSemaphoreGive(spiMutex);
+
+    auto cnt = 0;
+    String response = "files-";
+    response.concat(msg.str);
+    response.concat("\n");
+
+    while (filename != "")
+    {
+        log_d("name: %s", filename);
+        cnt++;
+        bool isPlayable = false;
+        if (isDir)
+        {
+            xSemaphoreTake(spiMutex, portMAX_DELAY);
+            File innerFolder = SD.open(filename);
+            xSemaphoreGive(spiMutex);
+
+            if (!innerFolder)
+            {
+                log_e("something went wrong scanning %s", filename);
+                // send some form of error message to the ws client
+                folder.close();
+                return;
+            }
+
+            String current;
+            bool innerIsDir = false;
+            xSemaphoreTake(spiMutex, portMAX_DELAY);
+            current = innerFolder.getNextFileName(&innerIsDir); // https://github.com/espressif/arduino-esp32/pull/7229
+            xSemaphoreGive(spiMutex);
+
+            while (current != "" && !isPlayable)
+            {
+                current.toLowerCase();
+                isPlayable = !innerIsDir &&
+                             (current.endsWith(".mp3") || current.endsWith(".ogg"));
+                xSemaphoreTake(spiMutex, portMAX_DELAY);
+                current = innerFolder.getNextFileName(&innerIsDir);
+                xSemaphoreGive(spiMutex);
+            }
+            innerFolder.close();
+        }
+
+        // zie: https://developer.mozilla.org/en-US/docs/Web/API/HTMLElement/dataset
+
+        if (isDir)
+        {
+            response.concat(isPlayable ? "playable\n" : "folder\n");
+            response.concat(filename.substring(filename.lastIndexOf('/') + 1));
+            response.concat("\n");
+        }
+
+        String test = "";
+        if (!isDir && filename.length() > 4)
+            test = filename.substring(filename.length() - 4);
+
+        if (!isDir && (test.equalsIgnoreCase(".mp3") || test.equalsIgnoreCase(".ogg")))
+        {
+            response.concat("file\n");
+            response.concat(filename.substring(filename.lastIndexOf('/') + 1));
+            response.concat("\n");
+        }
+
+        xSemaphoreTake(spiMutex, portMAX_DELAY);
+        filename = folder.getNextFileName(&isDir);
+        xSemaphoreGive(spiMutex);
+    }
+
+    log_i("scanned %i files in %i ms", cnt, millis() - START);
+    log_d("response: %s", response.c_str());
+    log_i("response size: %i", response.length());
+
+    // ws.text(msg.value, response.c_str());
+}
+
 void serverTask(void *parameter)
 {
+    xSemaphoreTake(spiMutex, portMAX_DELAY);
+    mountSDcard();
+    xSemaphoreGive(spiMutex);
+
     static AsyncWebServer server(80);
     static AsyncWebSocket ws("/ws");
 
@@ -221,6 +342,16 @@ void serverTask(void *parameter)
     ws.onEvent(websocketEventHandler);
     server.addHandler(&ws);
 
+    // test: add a command to the server queue to show a folder
+    serverMessage msg;
+    snprintf(msg.str, sizeof(msg.str), "/Front 242");
+    //  snprintf(msg.str, sizeof(msg.str), "/DJ sets");
+    //    snprintf(msg.str, sizeof(msg.str), "/De Jeugd van Tegenwoordig/Parels Voor De Zwijnen");
+    //       snprintf(msg.str, sizeof(msg.str), "/allentoussaint");
+    //snprintf(msg.str, sizeof(msg.str), "/");
+    msg.type = serverMessage::WS_LIST_FOLDER;
+    xQueueSend(serverQueue, &msg, portMAX_DELAY);
+
     while (1)
     {
         static serverMessage msg{};
@@ -228,6 +359,29 @@ void serverTask(void *parameter)
         {
             switch (msg.type)
             {
+            case serverMessage::WS_LIST_FOLDER:
+            {
+                xSemaphoreTake(spiMutex, portMAX_DELAY);
+                File folder = SD.open(msg.str);
+                xSemaphoreGive(spiMutex);
+                if (!folder)
+                {
+                    log_e("%s not found", msg.str);
+                    /// send some kind of error to ws client
+                    break;
+                }
+                if (!folder.isDirectory())
+                {
+                    log_e("%s is no directory", msg.str);
+                    folder.close();
+                    return;
+                }
+
+                sendFolderWS(folder, msg, ws);
+                folder.close();
+            }
+            break;
+
             case serverMessage::WS_UPDATE_NOWPLAYING:
                 ws.textAll(currentPlayingItem());
                 break;
