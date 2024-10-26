@@ -136,100 +136,40 @@ void callbackSetup()
 
     static const char *SVG_MIMETYPE{"image/svg+xml"};
 
-    server.on(
-        "/radioicon.svg", [](PsychicRequest *request)
-        {
-        if (htmlUnmodified(request, modifiedDate)) return request->reply(304);
-        PsychicResponse response = PsychicResponse(request);
+    // Helper function to create icon routes
+    auto createIconRoute = [&](const char *uri, const char *icon)
+    {
+        server.on(uri, [=](PsychicRequest *request)
+                  {
+            if (htmlUnmodified(request, modifiedDate))
+                return request->reply(304);
 
-//        AsyncWebServerResponse* const response = request->beginResponse_P(200, SVG_MIMETYPE, radioicon);
-        response.setContent(radioicon);
-        response.setContentType(SVG_MIMETYPE);
-        response.addHeader(HEADER_LASTMODIFIED, modifiedDate);
-        return response.send(); });
+            PsychicResponse response = PsychicResponse(request);
+            response.setContent(icon);
+            response.setContentType(SVG_MIMETYPE);
+            response.addHeader(HEADER_LASTMODIFIED, modifiedDate);
 
-    server.on(
-        "/playicon.svg", [](PsychicRequest *request)
-              {
-        if (htmlUnmodified(request, modifiedDate)) return request->send(304);
-        AsyncWebServerResponse* const response = request->beginResponse_P(200, SVG_MIMETYPE, playicon);
-        response->addHeader(HEADER_LASTMODIFIED, modifiedDate);
-        request->send(response); });
+            return response.send(); });
+    };
 
-    server.on("/libraryicon.svg", HTTP_GET, [](AsyncWebServerRequest *request)
-              {
-        if (htmlUnmodified(request, modifiedDate)) return request->send(304);
-        AsyncWebServerResponse* const response = request->beginResponse_P(200, SVG_MIMETYPE, libraryicon);
-        response->addHeader(HEADER_LASTMODIFIED, modifiedDate);
-        request->send(response); });
+    // Initialize routes for each icon
+    createIconRoute("/radioicon.svg", radioicon);
+    createIconRoute("/playicon.svg", playicon);
+    createIconRoute("/libraryicon.svg", libraryicon);
+    createIconRoute("/favoriteicon.svg", favoriteicon);
+    createIconRoute("/pasteicon.svg", pasteicon);
+    createIconRoute("/deleteicon.svg", deleteicon);
+    createIconRoute("/addfoldericon.svg", addfoldericon);
+    createIconRoute("/emptyicon.svg", emptyicon);
+    createIconRoute("/starticon.svg", starticon);
+    createIconRoute("/pauseicon.svg", pauseicon);
+    createIconRoute("/searchicon.svg", searchicon);
+    createIconRoute("/nosslicon.svg", nosslicon);
 
-    server.on("/favoriteicon.svg", HTTP_GET, [](AsyncWebServerRequest *request)
-              {
-        if (htmlUnmodified(request, modifiedDate)) return request->send(304);
-        AsyncWebServerResponse* const response = request->beginResponse_P(200, SVG_MIMETYPE, favoriteicon);
-        response->addHeader(HEADER_LASTMODIFIED, modifiedDate);
-        request->send(response); });
-
-    server.on("/streamicon.svg", HTTP_GET, [](AsyncWebServerRequest *request)
-              {
-        if (htmlUnmodified(request, modifiedDate)) return request->send(304);
-        AsyncWebServerResponse* const response = request->beginResponse_P(200, SVG_MIMETYPE, pasteicon);
-        response->addHeader(HEADER_LASTMODIFIED, modifiedDate);
-        request->send(response); });
-
-    server.on("/deleteicon.svg", HTTP_GET, [](AsyncWebServerRequest *request)
-              {
-        if (htmlUnmodified(request, modifiedDate)) return request->send(304);
-        AsyncWebServerResponse* const response = request->beginResponse_P(200, SVG_MIMETYPE, deleteicon);
-        response->addHeader(HEADER_LASTMODIFIED, modifiedDate);
-        request->send(response); });
-
-    server.on("/addfoldericon.svg", HTTP_GET, [](AsyncWebServerRequest *request)
-              {
-        if (htmlUnmodified(request, modifiedDate)) return request->send(304);
-        AsyncWebServerResponse* const response = request->beginResponse_P(200, SVG_MIMETYPE, addfoldericon);
-        response->addHeader(HEADER_LASTMODIFIED, modifiedDate);
-        request->send(response); });
-
-    server.on("/emptyicon.svg", HTTP_GET, [](AsyncWebServerRequest *request)
-              {
-        if (htmlUnmodified(request, modifiedDate)) return request->send(304);
-        AsyncWebServerResponse* const response = request->beginResponse_P(200, SVG_MIMETYPE, emptyicon);
-        response->addHeader(HEADER_LASTMODIFIED, modifiedDate);
-        request->send(response); });
-
-    server.on("/starticon.svg", HTTP_GET, [](AsyncWebServerRequest *request)
-              {
-        if (htmlUnmodified(request, modifiedDate)) return request->send(304);
-        AsyncWebServerResponse* const response = request->beginResponse_P(200, SVG_MIMETYPE, starticon);
-        response->addHeader(HEADER_LASTMODIFIED, modifiedDate);
-        request->send(response); });
-
-    server.on("/pauseicon.svg", HTTP_GET, [](AsyncWebServerRequest *request)
-              {
-        if (htmlUnmodified(request, modifiedDate)) return request->send(304);
-        AsyncWebServerResponse* const response = request->beginResponse_P(200, SVG_MIMETYPE, pauseicon);
-        response->addHeader(HEADER_LASTMODIFIED, modifiedDate);
-        request->send(response); });
-
-    server.on("/searchicon.svg", HTTP_GET, [](AsyncWebServerRequest *request)
-              {
-        if (htmlUnmodified(request, modifiedDate)) return request->send(304);
-        AsyncWebServerResponse* const response = request->beginResponse_P(200, SVG_MIMETYPE, searchicon);
-        response->addHeader(HEADER_LASTMODIFIED, modifiedDate);
-        request->send(response); });
-
-    server.on("/nosslicon.svg", HTTP_GET, [](AsyncWebServerRequest *request)
-              {
-        if (htmlUnmodified(request, modifiedDate)) return request->send(304);
-        AsyncWebServerResponse* const response = request->beginResponse_P(200, SVG_MIMETYPE, nosslicon);
-        response->addHeader(HEADER_LASTMODIFIED, modifiedDate);
-        request->send(response); });
-
-    server.onNotFound([](AsyncWebServerRequest *request)
+    server.onNotFound([](PsychicRequest *request)
                       {
         log_e("404 - Not found: 'http://%s%s'", request->host().c_str(), request->url().c_str());
-        request->send(404); });
+        request->reply(404); });
 
     DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
 }
