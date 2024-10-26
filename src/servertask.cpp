@@ -82,12 +82,14 @@ void callbackSetup()
     server.on(
         "/", [](PsychicRequest *request)
         {
-        if (htmlUnmodified(request, modifiedDate)) return request->reply(304);
-        PsychicResponse response = PsychicResponse(request);
-        response.addHeader(HEADER_LASTMODIFIED, modifiedDate);
-        response.addHeader(HEADER_CONTENT_ENCODING, GZIP_CONTENT_ENCODING);
-        response.setContent(index_htm_gz, index_htm_gz_len);
-        return response.send(); });
+            if (htmlUnmodified(request, modifiedDate))   
+                return request->reply(304);
+
+            PsychicResponse response = PsychicResponse(request);
+            response.addHeader(HEADER_LASTMODIFIED, modifiedDate);
+            response.addHeader(HEADER_CONTENT_ENCODING, GZIP_CONTENT_ENCODING);
+            response.setContent(index_htm_gz, index_htm_gz_len);
+            return response.send(); });
 
     server.on(
         "/scripturl", [](PsychicRequest *request)
@@ -138,8 +140,9 @@ void callbackSetup()
 
     auto createIconURL = [&](const char *uri, const char *icon)
     {
-        server.on(uri, [icon](PsychicRequest *request)
-                  {
+        server.on(
+            uri, [icon](PsychicRequest *request)
+            {
             if (htmlUnmodified(request, modifiedDate))
                 return request->reply(304);
 
@@ -147,7 +150,6 @@ void callbackSetup()
             response.setContent(icon);
             response.setContentType(SVG_MIMETYPE);
             response.addHeader(HEADER_LASTMODIFIED, modifiedDate);
-
             return response.send(); });
     };
 
@@ -173,35 +175,50 @@ void callbackSetup()
     DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
 }
 
+static void wsNewClientHandler(PsychicWebSocketClient *client)
+{
+    log_i("[socket] connection #%u connected from %s", client->socket(), client->remoteIP().toString().c_str());
+
+    String s;
+    client->sendMessage(playList.toString(s).c_str());
+    client->sendMessage(favoritesToString(s).c_str());
+
+    /*
+    serverMessage msg;
+    msg.singleClient = true;
+    msg.value = client->socket();
+    msg.type = serverMessage::WS_UPDATE_PLAYLIST;
+    xQueueSend(serverQueue, &msg, portMAX_DELAY);
+    msg.type = serverMessage::WS_UPDATE_FAVORITES;
+    xQueueSend(serverQueue, &msg, portMAX_DELAY);
+    msg.type = serverMessage::WS_UPDATE_VOLUME;
+    xQueueSend(serverQueue, &msg, portMAX_DELAY);
+    msg.type = serverMessage::WS_UPDATE_STREAMTITLE;
+    xQueueSend(serverQueue, &msg, portMAX_DELAY);
+    msg.type = serverMessage::WS_UPDATE_STATION;
+    xQueueSend(serverQueue, &msg, portMAX_DELAY);
+    msg.type = serverMessage::WS_UPDATE_STATUS;
+    snprintf(msg.str, sizeof(msg.str), "%s", _paused ? "paused" : "playing");
+    xQueueSend(serverQueue, &msg, portMAX_DELAY);
+    */
+}
+
+static esp_err_t wsFrameHandler(PsychicWebSocketRequest *request, httpd_ws_frame *frame)
+{
+    log_i("[socket] #%d sent: %s", request->client()->socket(), (char *)frame->payload);
+    return request->reply("frame");
+}
+
 void serverTask(void *parameter)
 {
     server.config.max_uri_handlers = 25;
-    server.listen(80);
+    server.config.max_open_sockets = 10;
 
+    server.listen(80);
     callbackSetup();
 
-    websocketHandler.onOpen(
-        [](PsychicWebSocketClient *client)
-        {
-            log_i("[socket] connection #%u connected from %s", client->socket(), client->remoteIP().toString().c_str());
-            // client->sendMessage("Hello!");
-            serverMessage msg;
-            msg.singleClient = true;
-            msg.value = client->socket();
-            msg.type = serverMessage::WS_UPDATE_PLAYLIST;
-            xQueueSend(serverQueue, &msg, portMAX_DELAY);
-            msg.type = serverMessage::WS_UPDATE_FAVORITES;
-            xQueueSend(serverQueue, &msg, portMAX_DELAY);
-            msg.type = serverMessage::WS_UPDATE_VOLUME;
-            xQueueSend(serverQueue, &msg, portMAX_DELAY);
-            msg.type = serverMessage::WS_UPDATE_STREAMTITLE;
-            xQueueSend(serverQueue, &msg, portMAX_DELAY);
-            msg.type = serverMessage::WS_UPDATE_STATION;
-            xQueueSend(serverQueue, &msg, portMAX_DELAY);
-            msg.type = serverMessage::WS_UPDATE_STATUS;
-            snprintf(msg.str, sizeof(msg.str), "%s", _paused ? "paused" : "playing");
-            xQueueSend(serverQueue, &msg, portMAX_DELAY);
-        });
+    websocketHandler.onOpen(wsNewClientHandler);
+    websocketHandler.onFrame(wsFrameHandler);
 
     server.on("/ws", &websocketHandler);
 
@@ -221,15 +238,12 @@ void serverTask(void *parameter)
                 String s;
                 if (msg.singleClient)
                 {
-                    // ws.text(msg.value, playList.toString(s));
-
-                    // make sure our client is still connected.
                     PsychicWebSocketClient *client = websocketHandler.getClient(msg.value);
                     if (client != NULL)
                         client->sendMessage(playList.toString(s).c_str());
+                    break;
                 }
-                else
-                    websocketHandler.sendAll(playList.toString(s).c_str());
+                websocketHandler.sendAll(playList.toString(s).c_str());
                 break;
             }
 
@@ -238,28 +252,28 @@ void serverTask(void *parameter)
                 snprintf(buff, sizeof(buff), "message\n%s", msg.str);
                 if (msg.singleClient)
                 {
-                    // ws.text(msg.value, buff);
                     PsychicWebSocketClient *client = websocketHandler.getClient(msg.value);
                     if (client != NULL)
                         client->sendMessage(buff);
+                    break;
                 }
-                else
-                    websocketHandler.sendAll(buff);
+                websocketHandler.sendAll(buff);
                 break;
 
             case serverMessage::WS_UPDATE_FAVORITES:
             {
-                String s;
                 if (msg.singleClient)
                 {
-                    // ws.text(msg.value, favoritesToString(s));
-
                     PsychicWebSocketClient *client = websocketHandler.getClient(msg.value);
                     if (client != NULL)
-                        client->sendMessage(s.c_str());
+                    {
+                        String s;
+                        client->sendMessage(favoritesToString(s).c_str());
+                    }
+                    break;
                 }
-                else
-                    websocketHandler.sendAll(favoritesToString(s).c_str());
+                String s;
+                websocketHandler.sendAll(favoritesToString(s).c_str());
                 break;
             }
 
@@ -268,12 +282,9 @@ void serverTask(void *parameter)
                 static char buff[300]{};
                 if (msg.singleClient)
                 {
-                    // ws.text(msg.value, buff);
-
                     PsychicWebSocketClient *client = websocketHandler.getClient(msg.value);
                     if (client != NULL)
                         client->sendMessage(buff);
-
                     break;
                 }
                 snprintf(buff, sizeof(buff), "streamtitle\n%s\n", percentEncode(msg.str).c_str());
@@ -287,14 +298,12 @@ void serverTask(void *parameter)
                 snprintf(buff, sizeof(buff), "volume\n%i\n", _playerVolume);
                 if (msg.singleClient)
                 {
-                    // ws.text(msg.value, buff);
-
                     PsychicWebSocketClient *client = websocketHandler.getClient(msg.value);
                     if (client != NULL)
                         client->sendMessage(buff);
+                    break;
                 }
-                else
-                    websocketHandler.sendAll(buff);
+                websocketHandler.sendAll(buff);
                 break;
             }
 
@@ -303,12 +312,9 @@ void serverTask(void *parameter)
                 static char buff[300]{};
                 if (msg.singleClient)
                 {
-                    //?/ws.text(msg.value, buff);
-
                     PsychicWebSocketClient *client = websocketHandler.getClient(msg.value);
                     if (client != NULL)
                         client->sendMessage(buff);
-
                     break;
                 }
                 playListItem item;
@@ -332,21 +338,17 @@ void serverTask(void *parameter)
                 snprintf(buff, sizeof(buff), "status\n%s\n", msg.str);
                 if (msg.singleClient)
                 {
-                    //ws.text(msg.value, buff);
-
                     PsychicWebSocketClient *client = websocketHandler.getClient(msg.value);
                     if (client != NULL)
                         client->sendMessage(buff);
-
+                    break;
                 }
-                else
-                    websocketHandler.sendAll(buff);
+                websocketHandler.sendAll(buff);
                 break;
             }
             default:
                 log_w("unhandled player message with number %i", msg.type);
             }
-            // ws.cleanupClients();
         }
     }
 }
