@@ -26,9 +26,9 @@ QueueHandle_t tftQueue = nullptr;
 QueueHandle_t playerQueue = nullptr;
 QueueHandle_t serverQueue = nullptr;
 
+extern void tftTask(void *parameter);
 extern void serverTask(void *parameter);
 extern void playerTask(void *parameter);
-extern void tftTask(void *parameter);
 
 
 void mountSDcard()

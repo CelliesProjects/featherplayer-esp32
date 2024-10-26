@@ -136,9 +136,9 @@ void callbackSetup()
 
     static const char *SVG_MIMETYPE{"image/svg+xml"};
 
-    auto createIconRoute = [&](const char *uri, const char *icon)
+    auto createIconURL = [&](const char *uri, const char *icon)
     {
-        server.on(uri, [=](PsychicRequest *request)
+        server.on(uri, [icon](PsychicRequest *request)
                   {
             if (htmlUnmodified(request, modifiedDate))
                 return request->reply(304);
@@ -151,19 +151,18 @@ void callbackSetup()
             return response.send(); });
     };
 
-    // Initialize routes for each icon
-    createIconRoute("/radioicon.svg", radioicon);
-    createIconRoute("/playicon.svg", playicon);
-    createIconRoute("/libraryicon.svg", libraryicon);
-    createIconRoute("/favoriteicon.svg", favoriteicon);
-    createIconRoute("/pasteicon.svg", pasteicon);
-    createIconRoute("/deleteicon.svg", deleteicon);
-    createIconRoute("/addfoldericon.svg", addfoldericon);
-    createIconRoute("/emptyicon.svg", emptyicon);
-    createIconRoute("/starticon.svg", starticon);
-    createIconRoute("/pauseicon.svg", pauseicon);
-    createIconRoute("/searchicon.svg", searchicon);
-    createIconRoute("/nosslicon.svg", nosslicon);
+    createIconURL("/radioicon.svg", radioicon);
+    createIconURL("/playicon.svg", playicon);
+    createIconURL("/libraryicon.svg", libraryicon);
+    createIconURL("/favoriteicon.svg", favoriteicon);
+    createIconURL("/pasteicon.svg", pasteicon);
+    createIconURL("/deleteicon.svg", deleteicon);
+    createIconURL("/addfoldericon.svg", addfoldericon);
+    createIconURL("/emptyicon.svg", emptyicon);
+    createIconURL("/starticon.svg", starticon);
+    createIconURL("/pauseicon.svg", pauseicon);
+    createIconURL("/searchicon.svg", searchicon);
+    createIconURL("/nosslicon.svg", nosslicon);
 
     server.onNotFound(
         [](PsychicRequest *request)
