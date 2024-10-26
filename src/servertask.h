@@ -4,6 +4,7 @@
 #include <FFat.h>
 #include <PsychicHttp.h>
 
+#include "serverMessage_t.h"
 #include "playList.h"
 #include "index_htm_gz.h"
 
@@ -15,7 +16,8 @@ extern uint8_t _playerVolume;
 extern playList_t playList;
 extern String percentEncode(const char *plaintext);
 extern QueueHandle_t serverQueue;
-extern void websocketEventHandler(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len);
+//extern void websocketEventHandler(PsychicWebSocketRequest *request, httpd_ws_frame *frame);
+extern bool _paused;
 
 // icons used in webif
 extern const char *radioicon;
@@ -31,26 +33,7 @@ extern const char *pauseicon;
 extern const char *searchicon;
 extern const char *nosslicon;
 
-struct serverMessage
-{
-    enum type
-    {
-        WS_UPDATE_STATION,
-        WS_UPDATE_STREAMTITLE,
-        WS_UPDATE_NOWPLAYING,
-        WS_UPDATE_FAVORITES,
-        WS_UPDATE_PLAYLIST,
-        WS_UPDATE_VOLUME,
-        WS_PASS_MESSAGE,
-        WS_UPDATE_PROGRESS,
-        WS_UPDATE_STATUS
-    };
-    type type;
-    size_t value;
-    size_t value2;
-    char str[160]{};
-    bool singleClient = false;
-};
+
 
 void callbackSetup();
 void serverTask(void *parameter);

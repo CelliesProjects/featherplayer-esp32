@@ -4,6 +4,7 @@
 #include <VS1053.h> /* https://github.com/baldram/ESP_VS1053_Library */
 #include <ESP32_VS1053_Stream.h>
 
+#include "playerMessage_t.h"
 #include "servertask.h"
 #include "tfttask.h"
 
@@ -18,24 +19,6 @@ extern QueueHandle_t playerQueue;
 extern uint8_t _playerVolume;
 extern bool _paused;
 extern size_t _savedPosition;
-
-struct playerMessage
-{
-    enum action
-    {
-        SET_VOLUME,
-        START_ITEM,
-        STOPSONG,
-        PAUSE,
-        RESUME,
-        SETTONE,
-    };
-    action action;
-    char str[256];
-    bool singleClient = false;
-    size_t value = 0;
-    size_t offset = 0;
-};
 
 void playerTask(void *parameter);
 void playListEnd();

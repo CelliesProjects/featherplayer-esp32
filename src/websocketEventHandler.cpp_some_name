@@ -1,7 +1,7 @@
 
 #include "websocketEventHandler.h"
 
-void websocketEventHandler(PsychicWebSocketRequest *request, httpd_ws_frame *frame);
+esp_err_t websocketEventHandler(PsychicWebSocketRequest *request, httpd_ws_frame *frame);
 {
     switch (type)
     {

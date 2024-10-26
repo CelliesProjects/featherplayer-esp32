@@ -176,18 +176,35 @@ void callbackSetup()
 
 void serverTask(void *parameter)
 {
-    server.config.max_uri_handlers = 20;
+    server.config.max_uri_handlers = 25;
     server.listen(80);
 
     callbackSetup();
 
-    websocketHandler.onFrame(
-        [](PsychicWebSocketRequest *request, httpd_ws_frame *frame)
+    websocketHandler.onOpen(
+        [](PsychicWebSocketClient *client)
         {
-     Serial.printf("[socket] #%d sent: %s\n", request->client()->socket(), (char *)frame->payload);
-     return request->reply(frame); });
+            log_i("[socket] connection #%u connected from %s", client->socket(), client->remoteIP().toString().c_str());
+            // client->sendMessage("Hello!");
+            serverMessage msg;
+            msg.singleClient = true;
+            msg.value = client->socket();
+            msg.type = serverMessage::WS_UPDATE_PLAYLIST;
+            xQueueSend(serverQueue, &msg, portMAX_DELAY);
+            msg.type = serverMessage::WS_UPDATE_FAVORITES;
+            xQueueSend(serverQueue, &msg, portMAX_DELAY);
+            msg.type = serverMessage::WS_UPDATE_VOLUME;
+            xQueueSend(serverQueue, &msg, portMAX_DELAY);
+            msg.type = serverMessage::WS_UPDATE_STREAMTITLE;
+            xQueueSend(serverQueue, &msg, portMAX_DELAY);
+            msg.type = serverMessage::WS_UPDATE_STATION;
+            xQueueSend(serverQueue, &msg, portMAX_DELAY);
+            msg.type = serverMessage::WS_UPDATE_STATUS;
+            snprintf(msg.str, sizeof(msg.str), "%s", _paused ? "paused" : "playing");
+            xQueueSend(serverQueue, &msg, portMAX_DELAY);
+        });
 
-    server.on("/ws",&websocketHandler);
+    server.on("/ws", &websocketHandler);
 
     while (1)
     {
@@ -204,9 +221,16 @@ void serverTask(void *parameter)
             {
                 String s;
                 if (msg.singleClient)
-                    ws.text(msg.value, playList.toString(s));
+                {
+                    // ws.text(msg.value, playList.toString(s));
+
+                    // make sure our client is still connected.
+                    PsychicWebSocketClient *client = websocketHandler.getClient(msg.value);
+                    if (client != NULL)
+                        client->sendMessage(playList.toString(s).c_str());
+                }
                 else
-                    websocketHandler.sendAll(playList.toString(s));
+                    websocketHandler.sendAll(playList.toString(s).c_str());
                 break;
             }
 
@@ -214,7 +238,12 @@ void serverTask(void *parameter)
                 char buff[256];
                 snprintf(buff, sizeof(buff), "message\n%s", msg.str);
                 if (msg.singleClient)
-                    ws.text(msg.value, buff);
+                {
+                    // ws.text(msg.value, buff);
+                    PsychicWebSocketClient *client = websocketHandler.getClient(msg.value);
+                    if (client != NULL)
+                        client->sendMessage(buff);
+                }
                 else
                     websocketHandler.sendAll(buff);
                 break;
@@ -223,9 +252,15 @@ void serverTask(void *parameter)
             {
                 String s;
                 if (msg.singleClient)
-                    ws.text(msg.value, favoritesToString(s));
+                {
+                    // ws.text(msg.value, favoritesToString(s));
+
+                    PsychicWebSocketClient *client = websocketHandler.getClient(msg.value);
+                    if (client != NULL)
+                        client->sendMessage(s.c_str());
+                }
                 else
-                    websocketHandler.sendAll(favoritesToString(s));
+                    websocketHandler.sendAll(favoritesToString(s).c_str());
                 break;
             }
 
@@ -234,7 +269,12 @@ void serverTask(void *parameter)
                 static char buff[300]{};
                 if (msg.singleClient)
                 {
-                    ws.text(msg.value, buff);
+                    // ws.text(msg.value, buff);
+
+                    PsychicWebSocketClient *client = websocketHandler.getClient(msg.value);
+                    if (client != NULL)
+                        client->sendMessage(buff);
+
                     break;
                 }
                 snprintf(buff, sizeof(buff), "streamtitle\n%s\n", percentEncode(msg.str).c_str());
@@ -247,7 +287,13 @@ void serverTask(void *parameter)
                 char buff[20];
                 snprintf(buff, sizeof(buff), "volume\n%i\n", _playerVolume);
                 if (msg.singleClient)
-                    ws.text(msg.value, buff);
+                {
+                    // ws.text(msg.value, buff);
+
+                    PsychicWebSocketClient *client = websocketHandler.getClient(msg.value);
+                    if (client != NULL)
+                        client->sendMessage(buff);
+                }
                 else
                     websocketHandler.sendAll(buff);
                 break;
@@ -258,7 +304,12 @@ void serverTask(void *parameter)
                 static char buff[300]{};
                 if (msg.singleClient)
                 {
-                    ws.text(msg.value, buff);
+                    //?/ws.text(msg.value, buff);
+
+                    PsychicWebSocketClient *client = websocketHandler.getClient(msg.value);
+                    if (client != NULL)
+                        client->sendMessage(buff);
+
                     break;
                 }
                 playListItem item;
@@ -281,7 +332,14 @@ void serverTask(void *parameter)
                 char buff[168];
                 snprintf(buff, sizeof(buff), "status\n%s\n", msg.str);
                 if (msg.singleClient)
-                    ws.text(msg.value, buff);
+                {
+                    //ws.text(msg.value, buff);
+
+                    PsychicWebSocketClient *client = websocketHandler.getClient(msg.value);
+                    if (client != NULL)
+                        client->sendMessage(buff);
+
+                }
                 else
                     websocketHandler.sendAll(buff);
                 break;
@@ -289,7 +347,7 @@ void serverTask(void *parameter)
             default:
                 log_w("unhandled player message with number %i", msg.type);
             }
-            //ws.cleanupClients();
+            // ws.cleanupClients();
         }
     }
 }
