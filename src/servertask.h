@@ -2,11 +2,13 @@
 #define __SERVER_TASK__
 
 #include <FFat.h>
-#include <AsyncTCP.h>          /* use the esphome.io fork*/
-#include <ESPAsyncWebServer.h> /* use the esphome.io fork*/
+#include <PsychicHttp.h>
 
 #include "playList.h"
 #include "index_htm_gz.h"
+
+PsychicHttpServer server;
+PsychicWebSocketHandler websocketHandler();
 
 extern const char *FAVORITES_FOLDER;
 extern uint8_t _playerVolume;

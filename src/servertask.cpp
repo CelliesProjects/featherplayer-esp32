@@ -2,7 +2,7 @@
 
 static const char *HEADER_MODIFIED_SINCE = "If-Modified-Since";
 
-static inline __attribute__((always_inline)) bool htmlUnmodified(const AsyncWebServerRequest *request, const char *date)
+static inline __attribute__((always_inline)) bool htmlUnmodified(PsychicRequest *request, const char *date)
 {
     return request->hasHeader(HEADER_MODIFIED_SINCE) && request->header(HEADER_MODIFIED_SINCE).equals(date);
 }
@@ -67,7 +67,7 @@ const String &favoritesToString(String &s)
     return s;
 }
 
-void callbackSetup(AsyncWebServer &server)
+void callbackSetup()
 {
     time_t bootTime;
     time(&bootTime);
@@ -79,54 +79,77 @@ void callbackSetup(AsyncWebServer &server)
     static const char *HEADER_CONTENT_ENCODING{"Content-Encoding"};
     static const char *GZIP_CONTENT_ENCODING{"gzip"};
 
-    server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
-              {
-        if (htmlUnmodified(request, modifiedDate)) return request->send(304);
-        AsyncWebServerResponse* const response = request->beginResponse_P(200, HTML_MIMETYPE, index_htm_gz, index_htm_gz_len);
-        response->addHeader(HEADER_LASTMODIFIED, modifiedDate);
-        response->addHeader(HEADER_CONTENT_ENCODING, GZIP_CONTENT_ENCODING);
-        request->send(response); });
+    server.on(
+        "/", [](PsychicRequest *request)
+        {
+        if (htmlUnmodified(request, modifiedDate)) return request->reply(304);
+        PsychicResponse response = PsychicResponse(request);
+        response.addHeader(HEADER_LASTMODIFIED, modifiedDate);
+        response.addHeader(HEADER_CONTENT_ENCODING, GZIP_CONTENT_ENCODING);
+        response.setContent(index_htm_gz, index_htm_gz_len);
+        return response.send(); });
 
-    server.on("/scripturl", HTTP_GET, [](AsyncWebServerRequest *request)
-              {
-        if (htmlUnmodified(request, modifiedDate)) return request->send(304);
-        AsyncResponseStream* const response = request->beginResponseStream(HTML_MIMETYPE);
-        response->addHeader(HEADER_LASTMODIFIED, modifiedDate);
-        response->println(SCRIPT_URL);
-        if (strlen(LIBRARY_USER) || strlen(LIBRARY_PWD)) {
-            response->println(LIBRARY_USER);
-            response->println(LIBRARY_PWD);
+    server.on(
+        "/scripturl", [](PsychicRequest *request)
+        {
+        if (htmlUnmodified(request, modifiedDate))
+            return request->reply(304);
+
+        String content = SCRIPT_URL;
+        content.concat("\n");
+        if (strlen(LIBRARY_USER) || strlen(LIBRARY_PWD))
+        {
+            content.concat(LIBRARY_USER);
+            content.concat("\n");
+            content.concat(LIBRARY_PWD);
+            content.concat("\n");
         }
-        request->send(response); });
+        // request->header(HEADER_LASTMODIFIED, modifiedDate);
+        return request->reply(content.c_str()); });
 
-    server.on("/stations", HTTP_GET, [](AsyncWebServerRequest *request)
-              {
-        if (htmlUnmodified(request, modifiedDate)) return request->send(304);
-        AsyncResponseStream* const response = request->beginResponseStream(HTML_MIMETYPE);
-        response->addHeader(HEADER_LASTMODIFIED, modifiedDate);
-        auto i = 0;
+    server.on(
+        "/stations", [](PsychicRequest *request)
+        {
+        if (htmlUnmodified(request, modifiedDate))
+            return request->reply(304);
+
+        PsychicResponse response = PsychicResponse(request);
+        response.addHeader(HEADER_LASTMODIFIED, modifiedDate);
+        String content;
+        int i = 0;
         while (i < NUMBER_OF_PRESETS)
-            response->printf("%s\n", preset[i++].name.c_str());
-        request->send(response); });
+            {
+                content.concat(preset[i++].name);
+                content.concat("\n");
+            }
+        response.setContent(content.c_str());
+        return response.send(); });
 
-    server.on("/favorites", HTTP_GET, [](AsyncWebServerRequest *request)
-              {
-        AsyncResponseStream* const response = request->beginResponseStream("text/plain");
-        response->addHeader("Cache-Control", "no-cache,no-store,must-revalidate,max-age=0");
-        String s;
-        response->print(favoritesToCStruct(s));
-        request->send(response); });
+    server.on(
+        "/favorites", [](PsychicRequest *request)
+        {
+        PsychicResponse response = PsychicResponse(request);
+        response.addHeader("Cache-Control", "no-cache,no-store,must-revalidate,max-age=0");
+        String content = favoritesToCStruct(s);
+        response.setContent(content.c_str());
+        return response.send(); });
 
     static const char *SVG_MIMETYPE{"image/svg+xml"};
 
-    server.on("/radioicon.svg", HTTP_GET, [](AsyncWebServerRequest *request)
-              {
-        if (htmlUnmodified(request, modifiedDate)) return request->send(304);
-        AsyncWebServerResponse* const response = request->beginResponse_P(200, SVG_MIMETYPE, radioicon);
-        response->addHeader(HEADER_LASTMODIFIED, modifiedDate);
-        request->send(response); });
+    server.on(
+        "/radioicon.svg", [](PsychicRequest *request)
+        {
+        if (htmlUnmodified(request, modifiedDate)) return request->reply(304);
+        PsychicResponse response = PsychicResponse(request);
 
-    server.on("/playicon.svg", HTTP_GET, [](AsyncWebServerRequest *request)
+//        AsyncWebServerResponse* const response = request->beginResponse_P(200, SVG_MIMETYPE, radioicon);
+        response.setContent(radioicon);
+        response.setContentType(SVG_MIMETYPE);
+        response.addHeader(HEADER_LASTMODIFIED, modifiedDate);
+        return response.send(); });
+
+    server.on(
+        "/playicon.svg", [](PsychicRequest *request)
               {
         if (htmlUnmodified(request, modifiedDate)) return request->send(304);
         AsyncWebServerResponse* const response = request->beginResponse_P(200, SVG_MIMETYPE, playicon);
@@ -213,13 +236,12 @@ void callbackSetup(AsyncWebServer &server)
 
 void serverTask(void *parameter)
 {
-    static AsyncWebServer server(80);
-    static AsyncWebSocket ws("/ws");
+    server.config.max_uri_handlers = 20;
+    server.listen(80);
 
-    callbackSetup(server);
-    server.begin();
-    ws.onEvent(websocketEventHandler);
-    server.addHandler(&ws);
+    callbackSetup();
+    // ws.onEvent(websocketEventHandler);
+    server.on("/ws")->attachHandler(&websocketHandler);
 
     while (1)
     {
