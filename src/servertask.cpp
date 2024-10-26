@@ -130,13 +130,12 @@ void callbackSetup()
         {
         PsychicResponse response = PsychicResponse(request);
         response.addHeader("Cache-Control", "no-cache,no-store,must-revalidate,max-age=0");
-        String content = favoritesToCStruct(s);
+        String content = favoritesToCStruct(content);
         response.setContent(content.c_str());
         return response.send(); });
 
     static const char *SVG_MIMETYPE{"image/svg+xml"};
 
-    // Helper function to create icon routes
     auto createIconRoute = [&](const char *uri, const char *icon)
     {
         server.on(uri, [=](PsychicRequest *request)
@@ -166,10 +165,11 @@ void callbackSetup()
     createIconRoute("/searchicon.svg", searchicon);
     createIconRoute("/nosslicon.svg", nosslicon);
 
-    server.onNotFound([](PsychicRequest *request)
-                      {
+    server.onNotFound(
+        [](PsychicRequest *request)
+        {
         log_e("404 - Not found: 'http://%s%s'", request->host().c_str(), request->url().c_str());
-        request->reply(404); });
+        return request->reply(404); });
 
     DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
 }
@@ -180,8 +180,14 @@ void serverTask(void *parameter)
     server.listen(80);
 
     callbackSetup();
-    // ws.onEvent(websocketEventHandler);
-    server.on("/ws")->attachHandler(&websocketHandler);
+
+    websocketHandler.onFrame(
+        [](PsychicWebSocketRequest *request, httpd_ws_frame *frame)
+        {
+     Serial.printf("[socket] #%d sent: %s\n", request->client()->socket(), (char *)frame->payload);
+     return request->reply(frame); });
+
+    server.on("/ws",&websocketHandler);
 
     while (1)
     {
@@ -191,7 +197,7 @@ void serverTask(void *parameter)
             switch (msg.type)
             {
             case serverMessage::WS_UPDATE_NOWPLAYING:
-                ws.textAll(currentPlayingItem());
+                websocketHandler.sendAll(currentPlayingItem());
                 break;
 
             case serverMessage::WS_UPDATE_PLAYLIST:
@@ -200,7 +206,7 @@ void serverTask(void *parameter)
                 if (msg.singleClient)
                     ws.text(msg.value, playList.toString(s));
                 else
-                    ws.textAll(playList.toString(s));
+                    websocketHandler.sendAll(playList.toString(s));
                 break;
             }
 
@@ -210,7 +216,7 @@ void serverTask(void *parameter)
                 if (msg.singleClient)
                     ws.text(msg.value, buff);
                 else
-                    ws.textAll(buff);
+                    websocketHandler.sendAll(buff);
                 break;
 
             case serverMessage::WS_UPDATE_FAVORITES:
@@ -219,7 +225,7 @@ void serverTask(void *parameter)
                 if (msg.singleClient)
                     ws.text(msg.value, favoritesToString(s));
                 else
-                    ws.textAll(favoritesToString(s));
+                    websocketHandler.sendAll(favoritesToString(s));
                 break;
             }
 
@@ -232,7 +238,7 @@ void serverTask(void *parameter)
                     break;
                 }
                 snprintf(buff, sizeof(buff), "streamtitle\n%s\n", percentEncode(msg.str).c_str());
-                ws.textAll(buff);
+                websocketHandler.sendAll(buff);
                 break;
             }
 
@@ -243,7 +249,7 @@ void serverTask(void *parameter)
                 if (msg.singleClient)
                     ws.text(msg.value, buff);
                 else
-                    ws.textAll(buff);
+                    websocketHandler.sendAll(buff);
                 break;
             }
 
@@ -258,7 +264,7 @@ void serverTask(void *parameter)
                 playListItem item;
                 playList.get(playList.currentItem(), item);
                 snprintf(buff, sizeof(buff), "showstation\n%s\n%s\n", msg.str, typeStr[item.type]);
-                ws.textAll(buff);
+                websocketHandler.sendAll(buff);
                 break;
             }
 
@@ -266,7 +272,7 @@ void serverTask(void *parameter)
             {
                 char buff[48];
                 snprintf(buff, sizeof(buff), "progress\n%i\n%i\n", msg.value, msg.value2);
-                ws.textAll(buff);
+                websocketHandler.sendAll(buff);
                 break;
             }
 
@@ -277,13 +283,13 @@ void serverTask(void *parameter)
                 if (msg.singleClient)
                     ws.text(msg.value, buff);
                 else
-                    ws.textAll(buff);
+                    websocketHandler.sendAll(buff);
                 break;
             }
             default:
                 log_w("unhandled player message with number %i", msg.type);
             }
-            ws.cleanupClients();
+            //ws.cleanupClients();
         }
     }
 }

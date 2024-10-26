@@ -8,7 +8,7 @@
 #include "index_htm_gz.h"
 
 PsychicHttpServer server;
-PsychicWebSocketHandler websocketHandler();
+PsychicWebSocketHandler websocketHandler;
 
 extern const char *FAVORITES_FOLDER;
 extern uint8_t _playerVolume;
@@ -52,7 +52,7 @@ struct serverMessage
     bool singleClient = false;
 };
 
-void callbackSetup(AsyncWebServer &server);
+void callbackSetup();
 void serverTask(void *parameter);
 
 #endif
