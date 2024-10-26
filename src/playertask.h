@@ -5,22 +5,28 @@
 #include <ESP32_VS1053_Stream.h>
 
 #include "playerMessage_t.h"
-#include "servertask.h"
-#include "tfttask.h"
+#include "serverMessage_t.h"
+#include "tftMessage_t.h"
+#include "playList.h"
 
 #define VS1053_CS 6
 #define VS1053_DCS 10
 #define VS1053_DREQ 9
-#define SDREADER_CS 5
+
+extern int SDREADER_CS;
+
+extern const char *PROGRAM_NAME;
+extern QueueHandle_t tftQueue;
+extern QueueHandle_t serverQueue;
+extern QueueHandle_t playerQueue;
+
 
 extern playList_t playList;
 extern SemaphoreHandle_t spiMutex;
-extern QueueHandle_t playerQueue;
 extern uint8_t _playerVolume;
 extern bool _paused;
 extern size_t _savedPosition;
 
-void playerTask(void *parameter);
 void playListEnd();
 
 #endif

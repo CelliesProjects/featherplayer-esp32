@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <WiFi.h>
+#include <FFat.h>
 #include <FS.h>
 #include <SD.h>
 #include <ESP32_VS1053_Stream.h>
@@ -25,12 +26,15 @@ QueueHandle_t tftQueue = nullptr;
 QueueHandle_t playerQueue = nullptr;
 QueueHandle_t serverQueue = nullptr;
 
-extern int SDREADER_CS;
 extern void serverTask(void *parameter);
+extern void playerTask(void *parameter);
 extern void tftTask(void *parameter);
+
 
 void mountSDcard()
 {
+    const int SDREADER_CS = 5;
+
     if (!SD.begin(SDREADER_CS))
     {
         log_e("Card Mount Failed");
