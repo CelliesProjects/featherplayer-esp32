@@ -67,7 +67,7 @@ const String &favoritesToString(String &s)
     return s;
 }
 
-void callbackSetup()
+void webserverUrlSetup()
 {
     time_t bootTime;
     time(&bootTime);
@@ -170,7 +170,7 @@ void callbackSetup()
         [](PsychicRequest *request)
         {
         log_e("404 - Not found: 'http://%s%s'", request->host().c_str(), request->url().c_str());
-        return request->reply(404); });
+        return request->reply(404, HTML_MIMETYPE, "<h1>Aaaw please dont cry</h1>This is a 404 page<br>You reached the end of the road...<br>The page you are looking for is gone"); });
 
     DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
 }
@@ -179,34 +179,25 @@ static void wsNewClientHandler(PsychicWebSocketClient *client)
 {
     log_i("[socket] connection #%u connected from %s", client->socket(), client->remoteIP().toString().c_str());
 
+    client->sendMessage(streamTitle);
+    client->sendMessage(showStation);
+
+    char buff[20];
+    snprintf(buff, sizeof(buff), "volume\n%i\n", _playerVolume);
+    client->sendMessage(buff);
+    
+    snprintf(buff, sizeof(buff), "status\n%s\n", _paused ? "paused" : "playing");
+    client->sendMessage(buff);
+
     String s;
     client->sendMessage(playList.toString(s).c_str());
-    client->sendMessage(favoritesToString(s).c_str());
-
-    /*
-    serverMessage msg;
-    msg.singleClient = true;
-    msg.value = client->socket();
-    msg.type = serverMessage::WS_UPDATE_PLAYLIST;
-    xQueueSend(serverQueue, &msg, portMAX_DELAY);
-    msg.type = serverMessage::WS_UPDATE_FAVORITES;
-    xQueueSend(serverQueue, &msg, portMAX_DELAY);
-    msg.type = serverMessage::WS_UPDATE_VOLUME;
-    xQueueSend(serverQueue, &msg, portMAX_DELAY);
-    msg.type = serverMessage::WS_UPDATE_STREAMTITLE;
-    xQueueSend(serverQueue, &msg, portMAX_DELAY);
-    msg.type = serverMessage::WS_UPDATE_STATION;
-    xQueueSend(serverQueue, &msg, portMAX_DELAY);
-    msg.type = serverMessage::WS_UPDATE_STATUS;
-    snprintf(msg.str, sizeof(msg.str), "%s", _paused ? "paused" : "playing");
-    xQueueSend(serverQueue, &msg, portMAX_DELAY);
-    */
+    client->sendMessage(favoritesToString(s).c_str());    
 }
 
 static esp_err_t wsFrameHandler(PsychicWebSocketRequest *request, httpd_ws_frame *frame)
 {
     log_i("[socket] #%d sent: %s", request->client()->socket(), (char *)frame->payload);
-    return request->reply("frame");
+    return ESP_OK;
 }
 
 void serverTask(void *parameter)
@@ -215,7 +206,7 @@ void serverTask(void *parameter)
     server.config.max_open_sockets = 10;
 
     server.listen(80);
-    callbackSetup();
+    webserverUrlSetup();
 
     websocketHandler.onOpen(wsNewClientHandler);
     websocketHandler.onFrame(wsFrameHandler);
@@ -236,13 +227,6 @@ void serverTask(void *parameter)
             case serverMessage::WS_UPDATE_PLAYLIST:
             {
                 String s;
-                if (msg.singleClient)
-                {
-                    PsychicWebSocketClient *client = websocketHandler.getClient(msg.value);
-                    if (client != NULL)
-                        client->sendMessage(playList.toString(s).c_str());
-                    break;
-                }
                 websocketHandler.sendAll(playList.toString(s).c_str());
                 break;
             }
@@ -262,16 +246,6 @@ void serverTask(void *parameter)
 
             case serverMessage::WS_UPDATE_FAVORITES:
             {
-                if (msg.singleClient)
-                {
-                    PsychicWebSocketClient *client = websocketHandler.getClient(msg.value);
-                    if (client != NULL)
-                    {
-                        String s;
-                        client->sendMessage(favoritesToString(s).c_str());
-                    }
-                    break;
-                }
                 String s;
                 websocketHandler.sendAll(favoritesToString(s).c_str());
                 break;
@@ -279,16 +253,8 @@ void serverTask(void *parameter)
 
             case serverMessage::WS_UPDATE_STREAMTITLE:
             {
-                static char buff[300]{};
-                if (msg.singleClient)
-                {
-                    PsychicWebSocketClient *client = websocketHandler.getClient(msg.value);
-                    if (client != NULL)
-                        client->sendMessage(buff);
-                    break;
-                }
-                snprintf(buff, sizeof(buff), "streamtitle\n%s\n", percentEncode(msg.str).c_str());
-                websocketHandler.sendAll(buff);
+                snprintf(streamTitle, sizeof(streamTitle), "streamtitle\n%s\n", percentEncode(msg.str).c_str());
+                websocketHandler.sendAll(streamTitle);
                 break;
             }
 
@@ -296,31 +262,16 @@ void serverTask(void *parameter)
             {
                 char buff[20];
                 snprintf(buff, sizeof(buff), "volume\n%i\n", _playerVolume);
-                if (msg.singleClient)
-                {
-                    PsychicWebSocketClient *client = websocketHandler.getClient(msg.value);
-                    if (client != NULL)
-                        client->sendMessage(buff);
-                    break;
-                }
                 websocketHandler.sendAll(buff);
                 break;
             }
 
             case serverMessage::WS_UPDATE_STATION:
             {
-                static char buff[300]{};
-                if (msg.singleClient)
-                {
-                    PsychicWebSocketClient *client = websocketHandler.getClient(msg.value);
-                    if (client != NULL)
-                        client->sendMessage(buff);
-                    break;
-                }
                 playListItem item;
                 playList.get(playList.currentItem(), item);
-                snprintf(buff, sizeof(buff), "showstation\n%s\n%s\n", msg.str, typeStr[item.type]);
-                websocketHandler.sendAll(buff);
+                snprintf(showStation, sizeof(showStation), "showstation\n%s\n%s\n", msg.str, typeStr[item.type]);
+                websocketHandler.sendAll(showStation);
                 break;
             }
 
@@ -334,15 +285,8 @@ void serverTask(void *parameter)
 
             case serverMessage::WS_UPDATE_STATUS:
             {
-                char buff[168];
+                char buff[30];
                 snprintf(buff, sizeof(buff), "status\n%s\n", msg.str);
-                if (msg.singleClient)
-                {
-                    PsychicWebSocketClient *client = websocketHandler.getClient(msg.value);
-                    if (client != NULL)
-                        client->sendMessage(buff);
-                    break;
-                }
                 websocketHandler.sendAll(buff);
                 break;
             }

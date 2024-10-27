@@ -16,7 +16,6 @@ extern uint8_t _playerVolume;
 extern playList_t playList;
 extern String percentEncode(const char *plaintext);
 extern QueueHandle_t serverQueue;
-//extern void websocketEventHandler(PsychicWebSocketRequest *request, httpd_ws_frame *frame);
 extern bool _paused;
 
 // icons used in webif
@@ -33,9 +32,7 @@ extern const char *pauseicon;
 extern const char *searchicon;
 extern const char *nosslicon;
 
-
-
-void callbackSetup();
-void serverTask(void *parameter);
+static char showStation[300]{};
+static char streamTitle[300]{};
 
 #endif
