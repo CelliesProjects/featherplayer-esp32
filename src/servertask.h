@@ -13,17 +13,16 @@
 PsychicHttpServer server;
 PsychicWebSocketHandler websocketHandler;
 
+extern void playListEnd();
+extern String percentEncode(const char *plaintext);
 extern const char *FAVORITES_FOLDER;
 extern uint8_t _playerVolume;
 extern playList_t playList;
-extern String percentEncode(const char *plaintext);
 extern QueueHandle_t serverQueue;
 extern QueueHandle_t playerQueue;
 extern bool _paused;
+
 size_t _savedPosition = 0;
-
-extern void playListEnd();
-
 
 // icons used in webif
 extern const char *radioicon;

@@ -67,7 +67,6 @@ static void handleFavoriteToPlaylist(PsychicRequest *request, const char *filena
         xQueueSend(playerQueue, &msg, portMAX_DELAY);
     }
 
-    // Optional: send a success message back to the client if desired
     serverMessage successMsg;
     successMsg.type = serverMessage::WS_PASS_MESSAGE;
     successMsg.singleClient = true;
@@ -368,33 +367,6 @@ static esp_err_t wsFrameHandler(PsychicWebSocketRequest *request, httpd_ws_frame
             snprintf(msg.str, sizeof(msg.str), "paused");
             xQueueSend(serverQueue, &msg, portMAX_DELAY);
         }
-        return ESP_OK;
-    }
-
-    else if (!strcmp("favoritetoplaylist", pch) || !strcmp("_favoritetoplaylist", pch))
-    {
-        const bool startNow = (pch[0] == '_');
-        pch = strtok(NULL, "\n");
-        if (!pch)
-        {
-            log_w("no payload");
-            return ESP_OK;
-        }
-
-        if (playList.size() == PLAYLIST_MAX_ITEMS)
-        {
-            serverMessage msg;
-            msg.type = serverMessage::WS_PASS_MESSAGE;
-            msg.singleClient = true;
-            msg.value = request->client()->socket();
-            snprintf(msg.str, sizeof(msg.str), "ERROR: Could not add '%s' to playlist!", pch);
-            xQueueSend(serverQueue, &msg, portMAX_DELAY);
-            return ESP_OK;
-        }
-        const auto cnt = playList.size();
-        handleFavoriteToPlaylist(request, pch, startNow);
-        if (playList.size() > cnt)
-            updatePlaylistOverWebSocket();
         return ESP_OK;
     }
 
@@ -711,18 +683,6 @@ static esp_err_t wsFrameHandler(PsychicWebSocketRequest *request, httpd_ws_frame
         }
         return ESP_OK;
     }
-
-
-
-
-
-
-
-
-
-
-
-
 
     else
         log_i("unhandled payload: %s", frame->payload);

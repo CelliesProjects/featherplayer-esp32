@@ -29,7 +29,6 @@ extern void tftTask(void *parameter);
 extern void serverTask(void *parameter);
 extern void playerTask(void *parameter);
 
-
 void mountSDcard()
 {
     const int SDREADER_CS = 5;
@@ -123,7 +122,7 @@ void setup()
         "tftTask",
         4096,
         NULL,
-        tskIDLE_PRIORITY + 16,
+        tskIDLE_PRIORITY + 10,
         NULL);
 
     if (taskResult != pdPASS)
@@ -206,7 +205,7 @@ void setup()
         "playerTask",
         6144,
         NULL,
-        tskIDLE_PRIORITY + 10,
+        tskIDLE_PRIORITY + 1,
         NULL);
 
     if (taskResult != pdPASS)
@@ -221,7 +220,7 @@ void setup()
         "serverTask",
         4096,
         NULL,
-        tskIDLE_PRIORITY + 15,
+        tskIDLE_PRIORITY,
         NULL);
 
     if (taskResult != pdPASS)
