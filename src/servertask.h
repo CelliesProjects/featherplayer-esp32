@@ -5,6 +5,7 @@
 #include <PsychicHttp.h>
 
 #include "serverMessage_t.h"
+#include "playerMessage_t.h"
 #include "playList.h"
 #include "index_htm_gz.h"
 
@@ -16,6 +17,7 @@ extern uint8_t _playerVolume;
 extern playList_t playList;
 extern String percentEncode(const char *plaintext);
 extern QueueHandle_t serverQueue;
+extern QueueHandle_t playerQueue;
 extern bool _paused;
 
 // icons used in webif
