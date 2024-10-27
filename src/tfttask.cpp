@@ -53,7 +53,7 @@ void tftTask(void *parameter)
         static tftMessage msg = {};
         if (xQueueReceive(tftQueue, &msg, pdTICKS_TO_MS(25)) == pdTRUE)
         {
-            switch (msg.action)
+            switch (msg.type)
             {
             case tftMessage::SYSTEM_MESSAGE:
                 canvas.fillScreen(ST77XX_RED);

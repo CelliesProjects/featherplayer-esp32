@@ -62,7 +62,7 @@ static void handleFavoriteToPlaylist(PsychicRequest *request, const char *filena
     {
         playList.setCurrentItem(previousSize);
         playerMessage msg;
-        msg.action = playerMessage::START_ITEM;
+        msg.type = playerMessage::START_ITEM;
         msg.value = playList.currentItem();
         xQueueSend(playerQueue, &msg, portMAX_DELAY);
     }
@@ -328,6 +328,15 @@ static void updatePlaylistOverWebSocket()
     xQueueSend(serverQueue, &msg, portMAX_DELAY);
 }
 
+void sendPlayerMessage(playerMessage::Type type, uint8_t value = 0, size_t offset = 0)
+{
+    playerMessage msg;
+    msg.type = type;
+    msg.value = value;
+    msg.offset = offset;
+    xQueueSend(playerQueue, &msg, portMAX_DELAY);
+}
+
 static esp_err_t wsFrameHandler(PsychicWebSocketRequest *request, httpd_ws_frame *frame)
 {
     log_v("received payload: %s", reinterpret_cast<char *>(frame->payload));
@@ -346,20 +355,14 @@ static esp_err_t wsFrameHandler(PsychicWebSocketRequest *request, httpd_ws_frame
 
     if (_paused && !strcmp("unpause", pch))
     {
-        playerMessage msg;
-        msg.action = playerMessage::START_ITEM;
-        msg.offset = _savedPosition;
-        msg.value = playList.currentItem();
-        xQueueSend(playerQueue, &msg, portMAX_DELAY);
+        sendPlayerMessage(playerMessage::START_ITEM, playList.currentItem(), _savedPosition);
         return ESP_OK;
     }
 
     else if (!_paused && !strcmp("pause", pch))
     {
         _paused = true;
-        playerMessage msg;
-        msg.action = playerMessage::PAUSE;
-        xQueueSend(playerQueue, &msg, portMAX_DELAY);
+        sendPlayerMessage(playerMessage::PAUSE);
 
         {
             serverMessage msg;
@@ -377,7 +380,7 @@ static esp_err_t wsFrameHandler(PsychicWebSocketRequest *request, httpd_ws_frame
             return ESP_OK;
         const uint8_t volume = atoi(pch);
         playerMessage msg;
-        msg.action = playerMessage::SET_VOLUME;
+        msg.type = playerMessage::SET_VOLUME;
         msg.value = volume > VS1053_MAXVOLUME ? VS1053_MAXVOLUME : volume;
         xQueueSend(playerQueue, &msg, portMAX_DELAY);
         return ESP_OK;
@@ -385,13 +388,10 @@ static esp_err_t wsFrameHandler(PsychicWebSocketRequest *request, httpd_ws_frame
 
     else if (!strcmp("previous", pch))
     {
+        if (playList.currentItem() == PLAYLIST_STOPPED)
+            return ESP_OK;
         if (playList.currentItem() > 0)
-        {
-            playerMessage msg;
-            msg.action = playerMessage::START_ITEM;
-            msg.value = playList.currentItem() - 1;
-            xQueueSend(playerQueue, &msg, portMAX_DELAY);
-        }
+            sendPlayerMessage(playerMessage::START_ITEM, playList.currentItem() - 1);
         return ESP_OK;
     }
 
@@ -400,12 +400,7 @@ static esp_err_t wsFrameHandler(PsychicWebSocketRequest *request, httpd_ws_frame
         if (playList.currentItem() == PLAYLIST_STOPPED)
             return ESP_OK;
         if (playList.currentItem() < playList.size() - 1)
-        {
-            playerMessage msg;
-            msg.action = playerMessage::START_ITEM;
-            msg.value = playList.currentItem() + 1;
-            xQueueSend(playerQueue, &msg, portMAX_DELAY);
-        }
+            sendPlayerMessage(playerMessage::START_ITEM, playList.currentItem() + 1);
         return ESP_OK;
     }
 
@@ -438,13 +433,9 @@ static esp_err_t wsFrameHandler(PsychicWebSocketRequest *request, httpd_ws_frame
         updatePlaylistOverWebSocket();
 
         if (startnow || playList.currentItem() == PLAYLIST_STOPPED)
-        {
-            playerMessage msg;
-            msg.action = playerMessage::START_ITEM;
-            msg.value = previousSize;
-            xQueueSend(playerQueue, &msg, portMAX_DELAY);
-            return ESP_OK;
-        }
+            sendPlayerMessage(playerMessage::START_ITEM, previousSize);
+
+        return ESP_OK;
     }
 
     else if (!strcmp("playitem", pch))
@@ -454,12 +445,9 @@ static esp_err_t wsFrameHandler(PsychicWebSocketRequest *request, httpd_ws_frame
             return ESP_OK;
         const uint8_t index = atoi(pch);
         if (index < playList.size())
-        {
-            playerMessage msg;
-            msg.action = playerMessage::START_ITEM;
-            msg.value = index;
-            xQueueSend(playerQueue, &msg, portMAX_DELAY);
-        }
+            sendPlayerMessage(playerMessage::START_ITEM, index);
+
+        return ESP_OK;
     }
 
     else if (!strcmp("deleteitem", pch))
@@ -472,45 +460,29 @@ static esp_err_t wsFrameHandler(PsychicWebSocketRequest *request, httpd_ws_frame
             return ESP_OK;
 
         playList.remove(index);
-        // deleted item was before current item
+
         if (index < playList.currentItem())
-        {
             playList.setCurrentItem(playList.currentItem() - 1);
-            updatePlaylistOverWebSocket();
-        }
-        //  deleted item was the current item
+
         else if (playList.currentItem() == index)
         {
-            // play the next item if there is one
             if (playList.currentItem() < playList.size())
-            {
-                playerMessage msg;
-                msg.action = playerMessage::START_ITEM;
-                msg.value = playList.currentItem();
-                xQueueSend(playerQueue, &msg, portMAX_DELAY);
-                updatePlaylistOverWebSocket();
-            }
+                sendPlayerMessage(playerMessage::START_ITEM, playList.currentItem());
             else
             {
-                playerMessage msg;
-                msg.action = playerMessage::STOPSONG;
-                xQueueSend(playerQueue, &msg, portMAX_DELAY);
-                updatePlaylistOverWebSocket();
+                sendPlayerMessage(playerMessage::STOPSONG);
                 playListEnd();
             }
         }
-        // deleted item was after current item
-        else
-            updatePlaylistOverWebSocket();
+        updatePlaylistOverWebSocket();
     }
 
     else if (!strcmp("clearlist", pch))
     {
         if (!playList.size())
             return ESP_OK;
-        playerMessage msg;
-        msg.action = playerMessage::STOPSONG;
-        xQueueSend(playerQueue, &msg, portMAX_DELAY);
+
+        sendPlayerMessage(playerMessage::STOPSONG);
 
         playList.clear();
         updatePlaylistOverWebSocket();
@@ -547,12 +519,8 @@ static esp_err_t wsFrameHandler(PsychicWebSocketRequest *request, httpd_ws_frame
         updatePlaylistOverWebSocket();
 
         if (startnow || playList.currentItem() == PLAYLIST_STOPPED)
-        {
-            playerMessage msg;
-            msg.action = playerMessage::START_ITEM;
-            msg.value = playList.size() - 1;
-            xQueueSend(playerQueue, &msg, portMAX_DELAY);
-        }
+            sendPlayerMessage(playerMessage::START_ITEM, playList.size() - 1);
+
         return ESP_OK;
     }
 
@@ -561,11 +529,8 @@ static esp_err_t wsFrameHandler(PsychicWebSocketRequest *request, httpd_ws_frame
         pch = strtok(NULL, "\n");
         if (!pch)
             return ESP_OK;
-        playerMessage msg;
-        msg.action = playerMessage::START_ITEM;
-        msg.value = playList.currentItem();
-        msg.offset = atoi(pch);
-        xQueueSend(playerQueue, &msg, portMAX_DELAY);
+
+        sendPlayerMessage(playerMessage::START_ITEM, playList.currentItem(), atoi(pch));
         return ESP_OK;
     }
 
@@ -675,12 +640,8 @@ static esp_err_t wsFrameHandler(PsychicWebSocketRequest *request, httpd_ws_frame
 
         const bool startnow = (pch[0] == '_');
         if (startnow || playList.currentItem() == PLAYLIST_STOPPED)
-        {
-            playerMessage msg;
-            msg.action = playerMessage::START_ITEM;
-            msg.value = playList.size() - 1;
-            xQueueSend(playerQueue, &msg, portMAX_DELAY);
-        }
+            sendPlayerMessage(playerMessage::START_ITEM, playList.size() - 1);
+
         return ESP_OK;
     }
 

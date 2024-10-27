@@ -5,7 +5,7 @@
 
 struct playerMessage
 {
-    enum action
+    enum Type
     {
         SET_VOLUME,
         START_ITEM,
@@ -14,7 +14,7 @@ struct playerMessage
         RESUME,
         SETTONE,
     };
-    action action;
+    Type type;
     char str[256];
     bool singleClient = false;
     size_t value = 0;

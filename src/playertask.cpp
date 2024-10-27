@@ -4,7 +4,7 @@ void playerTask(void *parameter)
 {
     {
         tftMessage msg;
-        msg.action = tftMessage::SYSTEM_MESSAGE;
+        msg.type = tftMessage::SYSTEM_MESSAGE;
         snprintf(msg.str, sizeof(msg.str), "Starting codec...");
         xQueueSend(tftQueue, &msg, portMAX_DELAY);
         delay(4);
@@ -29,7 +29,7 @@ void playerTask(void *parameter)
         static playerMessage msg;
         if (xQueueReceive(playerQueue, &msg, pdMS_TO_TICKS(25)) == pdTRUE)
         {
-            switch (msg.action)
+            switch (msg.type)
             {
 
             case playerMessage::SET_VOLUME:
@@ -74,11 +74,11 @@ void playerTask(void *parameter)
                 {
                     {
                         tftMessage msg;
-                        msg.action = tftMessage::CLEAR_SCREEN;
+                        msg.type = tftMessage::CLEAR_SCREEN;
                         xQueueSend(tftQueue, &msg, portMAX_DELAY);
 
                         msg.str[0] = 0;
-                        msg.action = tftMessage::SHOW_TITLE; // send empty title to tft to erase the scrollbar
+                        msg.type = tftMessage::SHOW_TITLE; // send empty title to tft to erase the scrollbar
                         xQueueSend(tftQueue, &msg, portMAX_DELAY);
                     }
 
@@ -104,7 +104,7 @@ void playerTask(void *parameter)
                         }
 
                         tftMessage msg;
-                        msg.action = tftMessage::SHOW_STATION;
+                        msg.type = tftMessage::SHOW_STATION;
                         snprintf(msg.str, sizeof(msg.str), "%s", playList.name(playList.currentItem()).c_str());
                         xQueueSend(tftQueue, &msg, portMAX_DELAY);
                     }
@@ -123,7 +123,7 @@ void playerTask(void *parameter)
                 if (audio.isRunning())
                 {
                     tftMessage msg;
-                    msg.action = tftMessage::SHOW_CODEC;
+                    msg.type = tftMessage::SHOW_CODEC;
                     if (audio.bitrate())
                         snprintf(msg.str, sizeof(msg.str), "%s %u kbps", audio.currentCodec(), audio.bitrate());
                     else
@@ -152,7 +152,7 @@ void playerTask(void *parameter)
                 break;
                 */
             default:
-                log_w("unhandled player message with number %i", msg.action);
+                log_w("unhandled player message with number %i", msg.type);
             }
         }
 
@@ -164,7 +164,7 @@ void playerTask(void *parameter)
         {
             tftMessage msg;
             audio.bufferStatus(msg.value1, msg.value2);
-            msg.action = tftMessage::BUFFER_STATUS;
+            msg.type = tftMessage::BUFFER_STATUS;
             xQueueSend(tftQueue, &msg, portMAX_DELAY);
         }
 
@@ -179,7 +179,7 @@ void playerTask(void *parameter)
                 xQueueSend(serverQueue, &msg, portMAX_DELAY);
             }
             tftMessage msg;
-            msg.action = tftMessage::PROGRESS_BAR;
+            msg.type = tftMessage::PROGRESS_BAR;
             msg.value1 = audio.position();
             msg.value2 = audio.size();
             xQueueSend(tftQueue, &msg, portMAX_DELAY);
@@ -216,13 +216,13 @@ void playListEnd()
 
     tftMessage msg;
 
-    msg.action = tftMessage::SHOW_IPADDRESS;
+    msg.type = tftMessage::SHOW_IPADDRESS;
     xQueueSend(tftQueue, &msg, portMAX_DELAY);
 
-    msg.action = tftMessage::SHOW_TITLE;
+    msg.type = tftMessage::SHOW_TITLE;
     snprintf(msg.str, sizeof(msg.str), "%s - %s", PROGRAM_NAME, GIT_VERSION);
     xQueueSend(tftQueue, &msg, portMAX_DELAY);
 
-    msg.action = tftMessage::SHOW_CLOCK;
+    msg.type = tftMessage::SHOW_CLOCK;
     xQueueSend(tftQueue, &msg, portMAX_DELAY);
 }

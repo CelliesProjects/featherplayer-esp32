@@ -148,13 +148,13 @@ void setup()
     else
     {
         tftMessage msg;
-        msg.action = tftMessage::SYSTEM_MESSAGE;
+        msg.type = tftMessage::SYSTEM_MESSAGE;
         snprintf(msg.str, sizeof(msg.str), "Formatting, please wait...");
         xQueueSend(tftQueue, &msg, portMAX_DELAY);
         delay(2);
 
         log_i("Formatting FFat...");
-        if (!FFat.format(true, (char *)"ffat") || !FFat.begin(0, "", 2))
+        if (!FFat.format(true) || !FFat.begin(0, "", 2))
         {
             log_e("FFat error while formatting. Halting.");
             while (true)
@@ -164,7 +164,7 @@ void setup()
 
     {
         tftMessage msg;
-        msg.action = tftMessage::SYSTEM_MESSAGE;
+        msg.type = tftMessage::SYSTEM_MESSAGE;
         snprintf(msg.str, sizeof(msg.str), "Connecting WiFi...");
         xQueueSend(tftQueue, &msg, portMAX_DELAY);
     }
@@ -189,7 +189,7 @@ void setup()
     log_i("Waiting for NTP sync...");
     {
         tftMessage msg;
-        msg.action = tftMessage::SYSTEM_MESSAGE;
+        msg.type = tftMessage::SYSTEM_MESSAGE;
         snprintf(msg.str, sizeof(msg.str), "Synching NTP...");
         xQueueSend(tftQueue, &msg, portMAX_DELAY);
     }
@@ -238,7 +238,7 @@ void loop() {}
 void audio_eof_stream(const char *info)
 {
     playerMessage msg;
-    msg.action = playerMessage::START_ITEM;
+    msg.type = playerMessage::START_ITEM;
     msg.value = playList.currentItem() + 1;
     xQueueSend(playerQueue, &msg, portMAX_DELAY);
 }
@@ -254,7 +254,7 @@ void audio_showstreamtitle(const char *info)
     }
 
     tftMessage msg;
-    msg.action = tftMessage::SHOW_TITLE;
+    msg.type = tftMessage::SHOW_TITLE;
     snprintf(msg.str, sizeof(msg.str), "%s", info);
     xQueueSend(tftQueue, &msg, portMAX_DELAY);
 }
