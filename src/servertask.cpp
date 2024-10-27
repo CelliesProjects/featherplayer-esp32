@@ -308,10 +308,10 @@ static esp_err_t wsFrameHandler(PsychicWebSocketRequest *request, httpd_ws_frame
         handleFavoriteToPlaylist(request, pch, startNow);
         if (playList.size() > cnt)
             updatePlaylistOverWebSocket();
-
     }
+
     else
-        log_i("payload: %s", pch);
+        log_i("unhandled payload: %s", pch);
 
     return ESP_OK;
 }
