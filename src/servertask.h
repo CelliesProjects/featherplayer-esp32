@@ -3,6 +3,7 @@
 
 #include <FFat.h>
 #include <PsychicHttp.h>
+#include <ESP32_VS1053_Stream.h>
 
 #include "serverMessage_t.h"
 #include "playerMessage_t.h"
@@ -19,6 +20,10 @@ extern String percentEncode(const char *plaintext);
 extern QueueHandle_t serverQueue;
 extern QueueHandle_t playerQueue;
 extern bool _paused;
+size_t _savedPosition = 0;
+
+extern void playListEnd();
+
 
 // icons used in webif
 extern const char *radioicon;

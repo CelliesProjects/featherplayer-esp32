@@ -133,6 +133,65 @@ static const String &favoritesToString(String &s)
     return s;
 }
 
+static bool saveItemToFavorites(PsychicWebSocketClient *client, const char *filename, const playListItem &item)
+{
+    if (!strlen(filename))
+    {
+        log_e("ERROR! no filename");
+        return false;
+    }
+    switch (item.type)
+    {
+    case HTTP_FILE:
+        log_d("file (wont save)%s", item.url.c_str());
+        return false;
+    case HTTP_PRESET:
+        log_d("preset (wont save) %s %s", preset[item.index].name.c_str(), preset[item.index].url.c_str());
+        return false;
+    case HTTP_FOUND:
+    case HTTP_FAVORITE:
+    {
+        char path[strlen(FAVORITES_FOLDER) + strlen(filename) + 1];
+        snprintf(path, sizeof(path), "%s%s", FAVORITES_FOLDER, filename);
+        File file = FFat.open(path, FILE_WRITE);
+        if (!file)
+        {
+            log_e("failed to open '%s' for writing", filename);
+            serverMessage msg;
+            msg.singleClient = true;
+            msg.value = client->socket();
+            snprintf(msg.str, sizeof(msg.str), "ERROR: Could not open '%s' for writing!", filename);
+            xQueueSend(serverQueue, &msg, portMAX_DELAY);
+            return false;
+        }
+        char url[item.url.length() + 2];
+        snprintf(url, sizeof(url), "%s\n", item.url.c_str());
+        const auto bytesWritten = file.print(url);
+        file.close();
+        if (bytesWritten < strlen(url))
+        {
+            log_e("ERROR! Saving '%s' failed - disk full?", filename);
+            serverMessage msg;
+            msg.type = serverMessage::WS_PASS_MESSAGE;
+            snprintf(msg.str, sizeof(msg.str), "ERROR: Could not completely save '%s' to favorites!", filename);
+            xQueueSend(serverQueue, &msg, portMAX_DELAY);
+            return false;
+        }
+        serverMessage msg;
+        msg.type = serverMessage::WS_PASS_MESSAGE;
+        snprintf(msg.str, sizeof(msg.str), "Saved '%s' to favorites!", filename);
+        xQueueSend(serverQueue, &msg, portMAX_DELAY);
+        return true;
+    }
+    break;
+    default:
+    {
+        log_w("Unhandled item.type.");
+        return false;
+    }
+    }
+}
+
 static void webserverUrlSetup()
 {
     time_t bootTime;
@@ -272,6 +331,8 @@ static void updatePlaylistOverWebSocket()
 
 static esp_err_t wsFrameHandler(PsychicWebSocketRequest *request, httpd_ws_frame *frame)
 {
+    log_v("received payload: %s", reinterpret_cast<char *>(frame->payload));
+
     if (frame->type != HTTPD_WS_TYPE_TEXT)
     {
         log_w("frame type != text");
@@ -284,7 +345,33 @@ static esp_err_t wsFrameHandler(PsychicWebSocketRequest *request, httpd_ws_frame
         return ESP_OK;
     }
 
-    if (!strcmp("favoritetoplaylist", pch) || !strcmp("_favoritetoplaylist", pch))
+    if (_paused && !strcmp("unpause", pch))
+    {
+        playerMessage msg;
+        msg.action = playerMessage::START_ITEM;
+        msg.offset = _savedPosition;
+        msg.value = playList.currentItem();
+        xQueueSend(playerQueue, &msg, portMAX_DELAY);
+        return ESP_OK;
+    }
+
+    else if (!_paused && !strcmp("pause", pch))
+    {
+        _paused = true;
+        playerMessage msg;
+        msg.action = playerMessage::PAUSE;
+        xQueueSend(playerQueue, &msg, portMAX_DELAY);
+
+        {
+            serverMessage msg;
+            msg.type = serverMessage::WS_UPDATE_STATUS;
+            snprintf(msg.str, sizeof(msg.str), "paused");
+            xQueueSend(serverQueue, &msg, portMAX_DELAY);
+        }
+        return ESP_OK;
+    }
+
+    else if (!strcmp("favoritetoplaylist", pch) || !strcmp("_favoritetoplaylist", pch))
     {
         const bool startNow = (pch[0] == '_');
         pch = strtok(NULL, "\n");
@@ -308,10 +395,337 @@ static esp_err_t wsFrameHandler(PsychicWebSocketRequest *request, httpd_ws_frame
         handleFavoriteToPlaylist(request, pch, startNow);
         if (playList.size() > cnt)
             updatePlaylistOverWebSocket();
+        return ESP_OK;
     }
 
+    else if (!strcmp("volume", pch))
+    {
+        pch = strtok(NULL, "\n");
+        if (!pch)
+            return ESP_OK;
+        const uint8_t volume = atoi(pch);
+        playerMessage msg;
+        msg.action = playerMessage::SET_VOLUME;
+        msg.value = volume > VS1053_MAXVOLUME ? VS1053_MAXVOLUME : volume;
+        xQueueSend(playerQueue, &msg, portMAX_DELAY);
+        return ESP_OK;
+    }
+
+    else if (!strcmp("previous", pch))
+    {
+        if (playList.currentItem() > 0)
+        {
+            playerMessage msg;
+            msg.action = playerMessage::START_ITEM;
+            msg.value = playList.currentItem() - 1;
+            xQueueSend(playerQueue, &msg, portMAX_DELAY);
+        }
+        return ESP_OK;
+    }
+
+    else if (!strcmp("next", pch))
+    {
+        if (playList.currentItem() == PLAYLIST_STOPPED)
+            return ESP_OK;
+        if (playList.currentItem() < playList.size() - 1)
+        {
+            playerMessage msg;
+            msg.action = playerMessage::START_ITEM;
+            msg.value = playList.currentItem() + 1;
+            xQueueSend(playerQueue, &msg, portMAX_DELAY);
+        }
+        return ESP_OK;
+    }
+
+    else if (!strcmp("filetoplaylist", pch) || !strcmp("_filetoplaylist", pch))
+    {
+        const bool startnow = (pch[0] == '_');
+        const uint32_t previousSize = playList.size();
+        pch = strtok(NULL, "\n");
+        while (pch)
+        {
+            playList.add({HTTP_FILE, "", pch, 0});
+            pch = strtok(NULL, "\n");
+        }
+        const uint32_t itemsAdded{playList.size() - previousSize};
+        log_d("Added %i library items to playlist", itemsAdded);
+
+        if (!itemsAdded)
+            return ESP_OK;
+
+        if (itemsAdded > 1)
+        {
+            serverMessage msg;
+            msg.type = serverMessage::WS_PASS_MESSAGE;
+            msg.singleClient = true;
+            msg.value = request->client()->socket();
+            snprintf(msg.str, sizeof(msg.str), "Added %u items to playlist", itemsAdded);
+            xQueueSend(serverQueue, &msg, portMAX_DELAY);
+        }
+
+        updatePlaylistOverWebSocket();
+
+        if (startnow || playList.currentItem() == PLAYLIST_STOPPED)
+        {
+            playerMessage msg;
+            msg.action = playerMessage::START_ITEM;
+            msg.value = previousSize;
+            xQueueSend(playerQueue, &msg, portMAX_DELAY);
+            return ESP_OK;
+        }
+    }
+
+    else if (!strcmp("playitem", pch))
+    {
+        pch = strtok(NULL, "\n");
+        if (!pch)
+            return ESP_OK;
+        const uint8_t index = atoi(pch);
+        if (index < playList.size())
+        {
+            playerMessage msg;
+            msg.action = playerMessage::START_ITEM;
+            msg.value = index;
+            xQueueSend(playerQueue, &msg, portMAX_DELAY);
+        }
+    }
+
+    else if (!strcmp("deleteitem", pch))
+    {
+        pch = strtok(NULL, "\n");
+        if (!pch)
+            return ESP_OK;
+        const uint8_t index = atoi(pch);
+        if (index >= playList.size())
+            return ESP_OK;
+
+        playList.remove(index);
+        // deleted item was before current item
+        if (index < playList.currentItem())
+        {
+            playList.setCurrentItem(playList.currentItem() - 1);
+            updatePlaylistOverWebSocket();
+        }
+        //  deleted item was the current item
+        else if (playList.currentItem() == index)
+        {
+            // play the next item if there is one
+            if (playList.currentItem() < playList.size())
+            {
+                playerMessage msg;
+                msg.action = playerMessage::START_ITEM;
+                msg.value = playList.currentItem();
+                xQueueSend(playerQueue, &msg, portMAX_DELAY);
+                updatePlaylistOverWebSocket();
+            }
+            else
+            {
+                playerMessage msg;
+                msg.action = playerMessage::STOPSONG;
+                xQueueSend(playerQueue, &msg, portMAX_DELAY);
+                updatePlaylistOverWebSocket();
+                playListEnd();
+            }
+        }
+        // deleted item was after current item
+        else
+            updatePlaylistOverWebSocket();
+    }
+
+    else if (!strcmp("clearlist", pch))
+    {
+        if (!playList.size())
+            return ESP_OK;
+        playerMessage msg;
+        msg.action = playerMessage::STOPSONG;
+        xQueueSend(playerQueue, &msg, portMAX_DELAY);
+
+        playList.clear();
+        updatePlaylistOverWebSocket();
+        playListEnd();
+        return ESP_OK;
+    }
+
+    else if (!strcmp("presetstation", pch) || !strcmp("_presetstation", pch))
+    {
+        log_d("adding preset");
+        const bool startnow = (pch[0] == '_');
+        pch = strtok(NULL, "\n");
+        if (!pch)
+            return ESP_OK;
+        const uint32_t index = atoi(pch);
+        if (index >= NUMBER_OF_PRESETS)
+            return ESP_OK;
+
+        const uint32_t previousSize = playList.size();
+        playList.add({HTTP_PRESET, "", "", index});
+        if (playList.size() == previousSize)
+        {
+            serverMessage msg;
+            msg.type = serverMessage::WS_PASS_MESSAGE;
+            msg.singleClient = true;
+            msg.value = request->client()->socket();
+            snprintf(msg.str, sizeof(msg.str), "ERROR: Could not add '%s' to playlist", preset[index].name.c_str());
+            xQueueSend(serverQueue, &msg, portMAX_DELAY);
+            return ESP_OK;
+        }
+
+        log_d("Added '%s' to playlist", preset[index].name.c_str());
+
+        updatePlaylistOverWebSocket();
+
+        if (startnow || playList.currentItem() == PLAYLIST_STOPPED)
+        {
+            playerMessage msg;
+            msg.action = playerMessage::START_ITEM;
+            msg.value = playList.size() - 1;
+            xQueueSend(playerQueue, &msg, portMAX_DELAY);
+        }
+        return ESP_OK;
+    }
+
+    else if (!strcmp("jumptopos", pch))
+    {
+        pch = strtok(NULL, "\n");
+        if (!pch)
+            return ESP_OK;
+        playerMessage msg;
+        msg.action = playerMessage::START_ITEM;
+        msg.value = playList.currentItem();
+        msg.offset = atoi(pch);
+        xQueueSend(playerQueue, &msg, portMAX_DELAY);
+        return ESP_OK;
+    }
+
+    else if (!strcmp("currenttofavorites", pch))
+    {
+        pch = strtok(NULL, "\n");
+        if (!pch)
+            return ESP_OK;
+        playListItem item;
+        playList.get(playList.currentItem(), item);
+        if (saveItemToFavorites(request->client(), pch, item))
+        {
+            serverMessage msg;
+            msg.type = serverMessage::WS_UPDATE_FAVORITES;
+            xQueueSend(serverQueue, &msg, portMAX_DELAY);
+        }
+        else
+        {
+            serverMessage msg;
+            msg.type = serverMessage::WS_PASS_MESSAGE;
+            snprintf(msg.str, sizeof(msg.str), "ERROR: Could not add '%s' to playlist!", pch);
+            xQueueSend(serverQueue, &msg, portMAX_DELAY);
+        }
+        return ESP_OK;
+    }
+
+    else if (!strcmp("favoritetoplaylist", pch) || !strcmp("_favoritetoplaylist", pch))
+    {
+        const bool startNow = (pch[0] == '_');
+        pch = strtok(NULL, "\n");
+        if (!pch)
+            return ESP_OK;
+
+        if (playList.size() == PLAYLIST_MAX_ITEMS)
+        {
+            serverMessage msg;
+            msg.type = serverMessage::WS_PASS_MESSAGE;
+            msg.singleClient = true;
+            msg.value = request->client()->socket();
+            snprintf(msg.str, sizeof(msg.str), "ERROR: Could not add '%s' to playlist!", pch);
+            xQueueSend(serverQueue, &msg, portMAX_DELAY);
+            return ESP_OK;
+        }
+        const auto cnt = playList.size();
+        handleFavoriteToPlaylist(request, pch, startNow);
+        if (playList.size() > cnt)
+            updatePlaylistOverWebSocket();
+        return ESP_OK;
+    }
+
+    else if (!strcmp("deletefavorite", pch))
+    {
+        pch = strtok(NULL, "\n");
+        if (!pch)
+            return ESP_OK;
+        char filename[strlen(FAVORITES_FOLDER) + strlen(pch) + 1];
+        snprintf(filename, sizeof(filename), "%s%s", FAVORITES_FOLDER, pch);
+        if (!FFat.remove(filename))
+        {
+            serverMessage msg;
+            msg.type = serverMessage::WS_PASS_MESSAGE;
+            msg.singleClient = true;
+            msg.value = request->client()->socket();
+            snprintf(msg.str, sizeof(msg.str), "ERROR: Could not delete %s", pch);
+            xQueueSend(serverQueue, &msg, portMAX_DELAY);
+        }
+        else
+        {
+            serverMessage msg;
+            msg.type = serverMessage::WS_UPDATE_FAVORITES;
+            xQueueSend(serverQueue, &msg, portMAX_DELAY);
+        }
+        return ESP_OK;
+    }
+
+    else if (!strcmp("foundlink", pch) || !strcmp("_foundlink", pch))
+    {
+        if (playList.size() == PLAYLIST_MAX_ITEMS)
+        {
+            serverMessage msg;
+            msg.type = serverMessage::WS_PASS_MESSAGE;
+            msg.singleClient = true;
+            msg.value = request->client()->socket();
+            snprintf(msg.str, sizeof(msg.str), "ERROR: Could not add new url to playlist");
+            xQueueSend(serverQueue, &msg, portMAX_DELAY);
+            return ESP_OK;
+        }
+        const char *url = strtok(NULL, "\n");
+        if (!url)
+            return ESP_OK;
+        const char *name = strtok(NULL, "\n");
+        if (!name)
+            return ESP_OK;
+
+        playList.add({HTTP_FOUND, name, url, 0});
+
+        serverMessage msg;
+        msg.type = serverMessage::WS_PASS_MESSAGE;
+        msg.singleClient = true;
+        msg.value = request->client()->socket();
+        snprintf(msg.str, sizeof(msg.str), "Added '%s' to playlist", name);
+        xQueueSend(serverQueue, &msg, portMAX_DELAY);
+
+        msg.singleClient = false;
+        msg.type = serverMessage::WS_UPDATE_PLAYLIST;
+        xQueueSend(serverQueue, &msg, portMAX_DELAY);
+
+        const bool startnow = (pch[0] == '_');
+        if (startnow || playList.currentItem() == PLAYLIST_STOPPED)
+        {
+            playerMessage msg;
+            msg.action = playerMessage::START_ITEM;
+            msg.value = playList.size() - 1;
+            xQueueSend(playerQueue, &msg, portMAX_DELAY);
+        }
+        return ESP_OK;
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
     else
-        log_i("unhandled payload: %s", pch);
+        log_i("unhandled payload: %s", frame->payload);
 
     return ESP_OK;
 }
