@@ -12,14 +12,12 @@
 #define VS1053_CS 6
 #define VS1053_DCS 10
 #define VS1053_DREQ 9
-
 extern int SDREADER_CS;
 
 extern const char *PROGRAM_NAME;
 extern QueueHandle_t tftQueue;
 extern QueueHandle_t serverQueue;
 extern QueueHandle_t playerQueue;
-
 
 extern playList_t playList;
 extern SemaphoreHandle_t spiMutex;

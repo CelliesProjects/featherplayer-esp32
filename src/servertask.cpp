@@ -7,14 +7,14 @@ static inline __attribute__((always_inline)) bool htmlUnmodified(PsychicRequest 
     return request->hasHeader(HEADER_MODIFIED_SINCE) && request->header(HEADER_MODIFIED_SINCE).equals(date);
 }
 
-const char *currentPlayingItem()
+static const char *currentPlayingItem()
 {
     static char buff[25];
     snprintf(buff, sizeof(buff), "currentPLitem\n%i\n", playList.currentItem());
     return buff;
 }
 
-const String &favoritesToCStruct(String &s)
+static const String &favoritesToCStruct(String &s)
 {
     File folder = FFat.open(FAVORITES_FOLDER);
     if (!folder)
@@ -39,13 +39,15 @@ const String &favoritesToCStruct(String &s)
             }
             s.concat("\"},\n");
         }
+        file.close();
         file = folder.openNextFile();
     }
+    folder.close();
     s.concat("};\n");
     return s;
 }
 
-const String &favoritesToString(String &s)
+static const String &favoritesToString(String &s)
 {
     s = "favorites\n";
     File folder = FFat.open(FAVORITES_FOLDER);
@@ -62,12 +64,14 @@ const String &favoritesToString(String &s)
             s.concat(file.name());
             s.concat("\n");
         }
+        file.close();
         file = folder.openNextFile();
     }
+    folder.close();
     return s;
 }
 
-void webserverUrlSetup()
+static void webserverUrlSetup()
 {
     time_t bootTime;
     time(&bootTime);
@@ -94,63 +98,65 @@ void webserverUrlSetup()
     server.on(
         "/scripturl", [](PsychicRequest *request)
         {
-        if (htmlUnmodified(request, modifiedDate))
-            return request->reply(304);
+            if (htmlUnmodified(request, modifiedDate))
+                return request->reply(304);
 
-        String content = SCRIPT_URL;
-        content.concat("\n");
-        if (strlen(LIBRARY_USER) || strlen(LIBRARY_PWD))
-        {
-            content.concat(LIBRARY_USER);
+            String content = SCRIPT_URL;
             content.concat("\n");
-            content.concat(LIBRARY_PWD);
-            content.concat("\n");
-        }
-        // request->header(HEADER_LASTMODIFIED, modifiedDate);
-        return request->reply(content.c_str()); });
+            if (strlen(LIBRARY_USER) || strlen(LIBRARY_PWD))
+            {
+                content.concat(LIBRARY_USER);
+                content.concat("\n");
+                content.concat(LIBRARY_PWD);
+                content.concat("\n");
+            }
+            PsychicResponse response = PsychicResponse(request);
+            response.addHeader(HEADER_LASTMODIFIED, modifiedDate);  
+            response.setContent(content.c_str());
+            return response.send(); });
 
     server.on(
         "/stations", [](PsychicRequest *request)
         {
-        if (htmlUnmodified(request, modifiedDate))
-            return request->reply(304);
+            if (htmlUnmodified(request, modifiedDate))
+                return request->reply(304);
 
-        PsychicResponse response = PsychicResponse(request);
-        response.addHeader(HEADER_LASTMODIFIED, modifiedDate);
-        String content;
-        int i = 0;
-        while (i < NUMBER_OF_PRESETS)
+            String content;
+            int i = 0;
+            while (i < NUMBER_OF_PRESETS)
             {
                 content.concat(preset[i++].name);
                 content.concat("\n");
             }
-        response.setContent(content.c_str());
-        return response.send(); });
+            PsychicResponse response = PsychicResponse(request);
+            response.addHeader(HEADER_LASTMODIFIED, modifiedDate);
+            response.setContent(content.c_str());
+            return response.send(); });
 
     server.on(
         "/favorites", [](PsychicRequest *request)
         {
-        PsychicResponse response = PsychicResponse(request);
-        response.addHeader("Cache-Control", "no-cache,no-store,must-revalidate,max-age=0");
-        String content = favoritesToCStruct(content);
-        response.setContent(content.c_str());
-        return response.send(); });
+            String content = favoritesToCStruct(content);
+            PsychicResponse response = PsychicResponse(request);
+            response.addHeader("Cache-Control", "no-cache,no-store,must-revalidate,max-age=0");
+            response.setContent(content.c_str());
+            return response.send(); });
 
-    static const char *SVG_MIMETYPE{"image/svg+xml"};
+    constexpr const char *SVG_MIMETYPE{"image/svg+xml"};
 
     auto createIconURL = [&](const char *uri, const char *icon)
     {
         server.on(
             uri, [icon](PsychicRequest *request)
             {
-            if (htmlUnmodified(request, modifiedDate))
-                return request->reply(304);
+                if (htmlUnmodified(request, modifiedDate))
+                    return request->reply(304);
 
-            PsychicResponse response = PsychicResponse(request);
-            response.setContent(icon);
-            response.setContentType(SVG_MIMETYPE);
-            response.addHeader(HEADER_LASTMODIFIED, modifiedDate);
-            return response.send(); });
+                PsychicResponse response = PsychicResponse(request);
+                response.setContent(icon);
+                response.setContentType(SVG_MIMETYPE);
+                response.addHeader(HEADER_LASTMODIFIED, modifiedDate);
+                return response.send(); });
     };
 
     createIconURL("/radioicon.svg", radioicon);
@@ -169,8 +175,8 @@ void webserverUrlSetup()
     server.onNotFound(
         [](PsychicRequest *request)
         {
-        log_e("404 - Not found: 'http://%s%s'", request->host().c_str(), request->url().c_str());
-        return request->reply(404, HTML_MIMETYPE, "<h1>Aaaw please dont cry</h1>This is a 404 page<br>You reached the end of the road...<br>The page you are looking for is gone"); });
+            log_e("404 - Not found: 'http://%s%s'", request->host().c_str(), request->url().c_str());
+            return request->reply(404, HTML_MIMETYPE, "<h1>Aaaw please dont cry</h1>This is a 404 page<br>You reached the end of the road...<br>The page you are looking for is gone"); });
 
     DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
 }
@@ -185,13 +191,13 @@ static void wsNewClientHandler(PsychicWebSocketClient *client)
     char buff[20];
     snprintf(buff, sizeof(buff), "volume\n%i\n", _playerVolume);
     client->sendMessage(buff);
-    
+
     snprintf(buff, sizeof(buff), "status\n%s\n", _paused ? "paused" : "playing");
     client->sendMessage(buff);
 
     String s;
     client->sendMessage(playList.toString(s).c_str());
-    client->sendMessage(favoritesToString(s).c_str());    
+    client->sendMessage(favoritesToString(s).c_str());
 }
 
 static esp_err_t wsFrameHandler(PsychicWebSocketRequest *request, httpd_ws_frame *frame)
