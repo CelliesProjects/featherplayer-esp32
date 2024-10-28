@@ -7,6 +7,26 @@ static inline __attribute__((always_inline)) bool htmlUnmodified(PsychicRequest 
     return request->hasHeader(HEADER_MODIFIED_SINCE) && request->header(HEADER_MODIFIED_SINCE).equals(date);
 }
 
+void sendPlayerMessage(playerMessage::Type type, uint8_t value = 0, size_t offset = 0)
+{
+    static playerMessage msg;
+    msg.type = type;
+    msg.value = value;
+    msg.offset = offset;
+    xQueueSend(playerQueue, &msg, portMAX_DELAY);
+}
+
+void sendServerMessage(serverMessage::Type type, const char *str = "", bool singleClient = false, size_t value = 0)
+{
+    static serverMessage msg;
+    msg.type = type;
+    msg.singleClient = singleClient;
+    msg.value = value;
+    if (strlen(str))
+        snprintf(msg.str, sizeof(msg.str), "%s", str);
+    xQueueSend(serverQueue, &msg, portMAX_DELAY);
+}
+
 static const char *currentPlayingItem()
 {
     static char buff[25];
@@ -19,12 +39,18 @@ static void handleFavoriteToPlaylist(PsychicRequest *request, const char *filena
     if (PLAYLIST_MAX_ITEMS == playList.size())
     {
         log_e("ERROR! Could not add %s to playlist", filename);
-        serverMessage msg;
-        msg.type = serverMessage::WS_PASS_MESSAGE;
-        msg.singleClient = true;
-        msg.value = request->client()->socket();
-        snprintf(msg.str, sizeof(msg.str), "ERROR: Could not add '%s' to playlist", filename);
-        xQueueSend(serverQueue, &msg, portMAX_DELAY);
+
+        char buff[256]{};
+        snprintf(buff, 256, "ERROR: Could not add '%s' to playlist", filename);
+        sendServerMessage(serverMessage::WS_PASS_MESSAGE, buff, true, request->client()->socket());
+        /*
+                serverMessage msg;
+                msg.type = serverMessage::WS_PASS_MESSAGE;
+                msg.singleClient = true;
+                msg.value = request->client()->socket();
+                snprintf(msg.str, sizeof(msg.str), "ERROR: Could not add '%s' to playlist", filename);
+                xQueueSend(serverQueue, &msg, portMAX_DELAY);
+        */
         return;
     }
 
@@ -34,12 +60,18 @@ static void handleFavoriteToPlaylist(PsychicRequest *request, const char *filena
     if (!file)
     {
         log_e("ERROR! Could not open %s", filename);
-        serverMessage msg;
-        msg.type = serverMessage::WS_PASS_MESSAGE;
-        msg.singleClient = true;
-        msg.value = request->client()->socket();
-        snprintf(msg.str, sizeof(msg.str), "ERROR: Could not add '%s' to playlist", filename);
-        xQueueSend(serverQueue, &msg, portMAX_DELAY);
+
+        char buff[256]{};
+        snprintf(buff, 256, "ERROR: Could not add '%s' to playlist", filename);
+        sendServerMessage(serverMessage::WS_PASS_MESSAGE, buff, true, request->client()->socket());
+        /*
+                serverMessage msg;
+                msg.type = serverMessage::WS_PASS_MESSAGE;
+                msg.singleClient = true;
+                msg.value = request->client()->socket();
+                snprintf(msg.str, sizeof(msg.str), "ERROR: Could not add '%s' to playlist", filename);
+                xQueueSend(serverQueue, &msg, portMAX_DELAY);
+        */
         return;
     }
 
@@ -61,18 +93,14 @@ static void handleFavoriteToPlaylist(PsychicRequest *request, const char *filena
     if (startNow || playList.currentItem() == PLAYLIST_STOPPED)
     {
         playList.setCurrentItem(previousSize);
+        sendPlayerMessage(playerMessage::START_ITEM, playList.currentItem());
+        /*
         playerMessage msg;
         msg.type = playerMessage::START_ITEM;
         msg.value = playList.currentItem();
         xQueueSend(playerQueue, &msg, portMAX_DELAY);
+        */
     }
-
-    serverMessage successMsg;
-    successMsg.type = serverMessage::WS_PASS_MESSAGE;
-    successMsg.singleClient = true;
-    successMsg.value = request->client()->socket();
-    snprintf(successMsg.str, sizeof(successMsg.str), "Successfully added '%s' to playlist", filename);
-    xQueueSend(serverQueue, &successMsg, portMAX_DELAY);
 }
 
 static const String &favoritesToCStruct(String &s)
@@ -156,11 +184,17 @@ static bool saveItemToFavorites(PsychicWebSocketClient *client, const char *file
         if (!file)
         {
             log_e("failed to open '%s' for writing", filename);
-            serverMessage msg;
-            msg.singleClient = true;
-            msg.value = client->socket();
-            snprintf(msg.str, sizeof(msg.str), "ERROR: Could not open '%s' for writing!", filename);
-            xQueueSend(serverQueue, &msg, portMAX_DELAY);
+
+            char buff[256]{};
+            snprintf(buff, 256, "ERROR: Could not open '%s' for writing!", filename);
+            sendServerMessage(serverMessage::WS_PASS_MESSAGE, buff, true, client->socket());
+            /*
+                        serverMessage msg;
+                        msg.singleClient = true;
+                        msg.value = client->socket();
+                        snprintf(msg.str, sizeof(msg.str), "ERROR: Could not open '%s' for writing!", filename);
+                        xQueueSend(serverQueue, &msg, portMAX_DELAY);
+            */
             return false;
         }
         char url[item.url.length() + 2];
@@ -170,16 +204,27 @@ static bool saveItemToFavorites(PsychicWebSocketClient *client, const char *file
         if (bytesWritten < strlen(url))
         {
             log_e("ERROR! Saving '%s' failed - disk full?", filename);
-            serverMessage msg;
-            msg.type = serverMessage::WS_PASS_MESSAGE;
-            snprintf(msg.str, sizeof(msg.str), "ERROR: Could not completely save '%s' to favorites!", filename);
-            xQueueSend(serverQueue, &msg, portMAX_DELAY);
+
+            char buff[256]{};
+            snprintf(buff, 256, "ERROR: Could not completely save '%s' to favorites!", filename);
+            sendServerMessage(serverMessage::WS_PASS_MESSAGE, buff, true, client->socket());
+            /*
+                        serverMessage msg;
+                        msg.type = serverMessage::WS_PASS_MESSAGE;
+                        snprintf(msg.str, sizeof(msg.str), "ERROR: Could not completely save '%s' to favorites!", filename);
+                        xQueueSend(serverQueue, &msg, portMAX_DELAY);
+             */
             return false;
         }
-        serverMessage msg;
-        msg.type = serverMessage::WS_PASS_MESSAGE;
-        snprintf(msg.str, sizeof(msg.str), "Saved '%s' to favorites!", filename);
-        xQueueSend(serverQueue, &msg, portMAX_DELAY);
+        char buff[256]{};
+        snprintf(buff, 256, "Saved '%s' to favorites!", filename);
+        sendServerMessage(serverMessage::WS_PASS_MESSAGE, buff, true, client->socket());
+        /*
+                serverMessage msg;
+                msg.type = serverMessage::WS_PASS_MESSAGE;
+                snprintf(msg.str, sizeof(msg.str), "Saved '%s' to favorites!", filename);
+                xQueueSend(serverQueue, &msg, portMAX_DELAY);
+        */
         return true;
     }
     break;
@@ -328,15 +373,6 @@ static void updatePlaylistOverWebSocket()
     xQueueSend(serverQueue, &msg, portMAX_DELAY);
 }
 
-void sendPlayerMessage(playerMessage::Type type, uint8_t value = 0, size_t offset = 0)
-{
-    playerMessage msg;
-    msg.type = type;
-    msg.value = value;
-    msg.offset = offset;
-    xQueueSend(playerQueue, &msg, portMAX_DELAY);
-}
-
 static esp_err_t wsFrameHandler(PsychicWebSocketRequest *request, httpd_ws_frame *frame)
 {
     log_v("received payload: %s", reinterpret_cast<char *>(frame->payload));
@@ -363,13 +399,16 @@ static esp_err_t wsFrameHandler(PsychicWebSocketRequest *request, httpd_ws_frame
     {
         _paused = true;
         sendPlayerMessage(playerMessage::PAUSE);
+        /*
+                {
+                    serverMessage msg;
+                    msg.type = serverMessage::WS_UPDATE_STATUS;
+                    snprintf(msg.str, sizeof(msg.str), "paused");
+                    xQueueSend(serverQueue, &msg, portMAX_DELAY);
+                }
+        */
+        sendServerMessage(serverMessage::WS_UPDATE_STATUS, "paused");
 
-        {
-            serverMessage msg;
-            msg.type = serverMessage::WS_UPDATE_STATUS;
-            snprintf(msg.str, sizeof(msg.str), "paused");
-            xQueueSend(serverQueue, &msg, portMAX_DELAY);
-        }
         return ESP_OK;
     }
 
@@ -379,10 +418,14 @@ static esp_err_t wsFrameHandler(PsychicWebSocketRequest *request, httpd_ws_frame
         if (!pch)
             return ESP_OK;
         const uint8_t volume = atoi(pch);
-        playerMessage msg;
-        msg.type = playerMessage::SET_VOLUME;
-        msg.value = volume > VS1053_MAXVOLUME ? VS1053_MAXVOLUME : volume;
-        xQueueSend(playerQueue, &msg, portMAX_DELAY);
+        sendPlayerMessage(playerMessage::SET_VOLUME,
+                          volume > VS1053_MAXVOLUME ? VS1053_MAXVOLUME : volume);
+        /*
+                playerMessage msg;
+                msg.type = playerMessage::SET_VOLUME;
+                msg.value = volume > VS1053_MAXVOLUME ? VS1053_MAXVOLUME : volume;
+                xQueueSend(playerQueue, &msg, portMAX_DELAY);
+        */
         return ESP_OK;
     }
 
@@ -422,12 +465,17 @@ static esp_err_t wsFrameHandler(PsychicWebSocketRequest *request, httpd_ws_frame
 
         if (itemsAdded > 1)
         {
+            char buff[32];
+            snprintf(buff, 32, "Added %u items to playlist", itemsAdded);
+            sendServerMessage(serverMessage::WS_PASS_MESSAGE, buff, true, request->client()->socket());
+            /*
             serverMessage msg;
             msg.type = serverMessage::WS_PASS_MESSAGE;
             msg.singleClient = true;
             msg.value = request->client()->socket();
             snprintf(msg.str, sizeof(msg.str), "Added %u items to playlist", itemsAdded);
             xQueueSend(serverQueue, &msg, portMAX_DELAY);
+            */
         }
 
         updatePlaylistOverWebSocket();
@@ -475,6 +523,7 @@ static esp_err_t wsFrameHandler(PsychicWebSocketRequest *request, httpd_ws_frame
             }
         }
         updatePlaylistOverWebSocket();
+        return ESP_OK;
     }
 
     else if (!strcmp("clearlist", pch))
@@ -505,12 +554,17 @@ static esp_err_t wsFrameHandler(PsychicWebSocketRequest *request, httpd_ws_frame
         playList.add({HTTP_PRESET, "", "", index});
         if (playList.size() == previousSize)
         {
-            serverMessage msg;
-            msg.type = serverMessage::WS_PASS_MESSAGE;
-            msg.singleClient = true;
-            msg.value = request->client()->socket();
-            snprintf(msg.str, sizeof(msg.str), "ERROR: Could not add '%s' to playlist", preset[index].name.c_str());
-            xQueueSend(serverQueue, &msg, portMAX_DELAY);
+            char buff[256];
+            snprintf(buff, 256, "ERROR: Could not add '%s' to playlist", preset[index].name.c_str());
+            sendServerMessage(serverMessage::WS_PASS_MESSAGE, buff, true, request->client()->socket());
+            /*
+                        serverMessage msg;
+                        msg.type = serverMessage::WS_PASS_MESSAGE;
+                        msg.singleClient = true;
+                        msg.value = request->client()->socket();
+                        snprintf(msg.str, sizeof(msg.str), "ERROR: Could not add '%s' to playlist", preset[index].name.c_str());
+                        xQueueSend(serverQueue, &msg, portMAX_DELAY);
+            */
             return ESP_OK;
         }
 
@@ -543,17 +597,26 @@ static esp_err_t wsFrameHandler(PsychicWebSocketRequest *request, httpd_ws_frame
         playList.get(playList.currentItem(), item);
         if (saveItemToFavorites(request->client(), pch, item))
         {
+            sendServerMessage(serverMessage::WS_UPDATE_FAVORITES);
+            /*
             serverMessage msg;
             msg.type = serverMessage::WS_UPDATE_FAVORITES;
             xQueueSend(serverQueue, &msg, portMAX_DELAY);
+            */
         }
         else
         {
-            serverMessage msg;
-            msg.type = serverMessage::WS_PASS_MESSAGE;
-            snprintf(msg.str, sizeof(msg.str), "ERROR: Could not add '%s' to playlist!", pch);
-            xQueueSend(serverQueue, &msg, portMAX_DELAY);
+            char buff[256];
+            snprintf(buff, 256, "ERROR: Could not add '%s' to playlist!", pch);
+            sendServerMessage(serverMessage::WS_PASS_MESSAGE, buff, true, request->client()->socket());
+            /*
+                        serverMessage msg;
+                        msg.type = serverMessage::WS_PASS_MESSAGE;
+                        snprintf(msg.str, sizeof(msg.str), "ERROR: Could not add '%s' to playlist!", pch);
+                        xQueueSend(serverQueue, &msg, portMAX_DELAY);
+            */
         }
+
         return ESP_OK;
     }
 
@@ -566,12 +629,17 @@ static esp_err_t wsFrameHandler(PsychicWebSocketRequest *request, httpd_ws_frame
 
         if (playList.size() == PLAYLIST_MAX_ITEMS)
         {
-            serverMessage msg;
-            msg.type = serverMessage::WS_PASS_MESSAGE;
-            msg.singleClient = true;
-            msg.value = request->client()->socket();
-            snprintf(msg.str, sizeof(msg.str), "ERROR: Could not add '%s' to playlist!", pch);
-            xQueueSend(serverQueue, &msg, portMAX_DELAY);
+            char buff[256];
+            snprintf(buff, 256, "ERROR: Could not add '%s' to playlist!", pch);
+            sendServerMessage(serverMessage::WS_PASS_MESSAGE, buff, true, request->client()->socket());
+            /*
+                        serverMessage msg;
+                        msg.type = serverMessage::WS_PASS_MESSAGE;
+                        msg.singleClient = true;
+                        msg.value = request->client()->socket();
+                        snprintf(msg.str, sizeof(msg.str), "ERROR: Could not add '%s' to playlist!", pch);
+                        xQueueSend(serverQueue, &msg, portMAX_DELAY);
+            */
             return ESP_OK;
         }
         const auto cnt = playList.size();
@@ -590,18 +658,26 @@ static esp_err_t wsFrameHandler(PsychicWebSocketRequest *request, httpd_ws_frame
         snprintf(filename, sizeof(filename), "%s%s", FAVORITES_FOLDER, pch);
         if (!FFat.remove(filename))
         {
-            serverMessage msg;
-            msg.type = serverMessage::WS_PASS_MESSAGE;
-            msg.singleClient = true;
-            msg.value = request->client()->socket();
-            snprintf(msg.str, sizeof(msg.str), "ERROR: Could not delete %s", pch);
-            xQueueSend(serverQueue, &msg, portMAX_DELAY);
+            char buff[256];
+            snprintf(buff, 256, "ERROR: Could not delete %s", filename);
+            sendServerMessage(serverMessage::WS_PASS_MESSAGE, buff, true, request->client()->socket());
+            /*
+                        serverMessage msg;
+                        msg.type = serverMessage::WS_PASS_MESSAGE;
+                        msg.singleClient = true;
+                        msg.value = request->client()->socket();
+                        snprintf(msg.str, sizeof(msg.str), "ERROR: Could not delete %s", pch);
+                        xQueueSend(serverQueue, &msg, portMAX_DELAY);
+            */
         }
         else
         {
-            serverMessage msg;
-            msg.type = serverMessage::WS_UPDATE_FAVORITES;
-            xQueueSend(serverQueue, &msg, portMAX_DELAY);
+            sendServerMessage(serverMessage::WS_UPDATE_FAVORITES);
+            /*
+                        serverMessage msg;
+                        msg.type = serverMessage::WS_UPDATE_FAVORITES;
+                        xQueueSend(serverQueue, &msg, portMAX_DELAY);
+            */
         }
         return ESP_OK;
     }
@@ -610,12 +686,17 @@ static esp_err_t wsFrameHandler(PsychicWebSocketRequest *request, httpd_ws_frame
     {
         if (playList.size() == PLAYLIST_MAX_ITEMS)
         {
+            char buff[42];
+            snprintf(buff, 45, "ERROR: Could not add new url to playlist");
+            sendServerMessage(serverMessage::WS_PASS_MESSAGE, buff, true, request->client()->socket());
+            /*
             serverMessage msg;
             msg.type = serverMessage::WS_PASS_MESSAGE;
             msg.singleClient = true;
             msg.value = request->client()->socket();
             snprintf(msg.str, sizeof(msg.str), "ERROR: Could not add new url to playlist");
             xQueueSend(serverQueue, &msg, portMAX_DELAY);
+            */
             return ESP_OK;
         }
         const char *url = strtok(NULL, "\n");
@@ -627,17 +708,23 @@ static esp_err_t wsFrameHandler(PsychicWebSocketRequest *request, httpd_ws_frame
 
         playList.add({HTTP_FOUND, name, url, 0});
 
+        char buff[256];
+        snprintf(buff, 256, "Added '%s' to playlist", name);
+        sendServerMessage(serverMessage::WS_PASS_MESSAGE, buff, true, request->client()->socket());
+/*
         serverMessage msg;
         msg.type = serverMessage::WS_PASS_MESSAGE;
         msg.singleClient = true;
         msg.value = request->client()->socket();
         snprintf(msg.str, sizeof(msg.str), "Added '%s' to playlist", name);
         xQueueSend(serverQueue, &msg, portMAX_DELAY);
-
+*/
+        sendServerMessage(serverMessage::WS_UPDATE_PLAYLIST);
+        /*
         msg.singleClient = false;
         msg.type = serverMessage::WS_UPDATE_PLAYLIST;
         xQueueSend(serverQueue, &msg, portMAX_DELAY);
-
+*/
         const bool startnow = (pch[0] == '_');
         if (startnow || playList.currentItem() == PLAYLIST_STOPPED)
             sendPlayerMessage(playerMessage::START_ITEM, playList.size() - 1);

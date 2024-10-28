@@ -2,7 +2,7 @@
 #define _SERVER_MESSGE_
 struct serverMessage
 {
-    enum type
+    enum Type
     {
         WS_UPDATE_STATION,
         WS_UPDATE_STREAMTITLE,
@@ -14,7 +14,7 @@ struct serverMessage
         WS_UPDATE_PROGRESS,
         WS_UPDATE_STATUS
     };
-    type type;
+    Type type;
     size_t value;
     size_t value2;
     char str[160]{};
