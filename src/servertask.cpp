@@ -377,6 +377,7 @@ static esp_err_t wsFrameHandler(PsychicWebSocketRequest *request, httpd_ws_frame
     {
         if (playList.currentItem() == PLAYLIST_STOPPED)
             return ESP_OK;
+
         if (playList.currentItem() > 0)
             sendPlayerMessage(playerMessage::START_ITEM, playList.currentItem() - 1);
         return ESP_OK;
@@ -386,6 +387,7 @@ static esp_err_t wsFrameHandler(PsychicWebSocketRequest *request, httpd_ws_frame
     {
         if (playList.currentItem() == PLAYLIST_STOPPED)
             return ESP_OK;
+
         if (playList.currentItem() < playList.size() - 1)
             sendPlayerMessage(playerMessage::START_ITEM, playList.currentItem() + 1);
         return ESP_OK;
@@ -414,6 +416,7 @@ static esp_err_t wsFrameHandler(PsychicWebSocketRequest *request, httpd_ws_frame
             sendServerMessage(serverMessage::WS_PASS_MESSAGE, buff, true, request->client()->socket());
         }
         updatePlaylistOverWebSocket();
+
         if (startnow || playList.currentItem() == PLAYLIST_STOPPED)
             sendPlayerMessage(playerMessage::START_ITEM, previousSize);
         return ESP_OK;
@@ -436,6 +439,7 @@ static esp_err_t wsFrameHandler(PsychicWebSocketRequest *request, httpd_ws_frame
         pch = strtok(NULL, "\n");
         if (!pch)
             return ESP_OK;
+
         const uint8_t index = atoi(pch);
         if (index >= playList.size())
             return ESP_OK;
@@ -519,6 +523,7 @@ static esp_err_t wsFrameHandler(PsychicWebSocketRequest *request, httpd_ws_frame
         pch = strtok(NULL, "\n");
         if (!pch)
             return ESP_OK;
+
         playListItem item;
         playList.get(playList.currentItem(), item);
         if (saveItemToFavorites(request->client(), pch, item))
@@ -546,6 +551,7 @@ static esp_err_t wsFrameHandler(PsychicWebSocketRequest *request, httpd_ws_frame
             sendServerMessage(serverMessage::WS_PASS_MESSAGE, buff, true, request->client()->socket());
             return ESP_OK;
         }
+
         const auto cnt = playList.size();
         handleFavoriteToPlaylist(request, pch, startNow);
         if (playList.size() > cnt)
@@ -580,6 +586,7 @@ static esp_err_t wsFrameHandler(PsychicWebSocketRequest *request, httpd_ws_frame
                               "ERROR: Could not add new url to playlist", true, request->client()->socket());
             return ESP_OK;
         }
+        
         const char *url = strtok(NULL, "\n");
         if (!url)
             return ESP_OK;
