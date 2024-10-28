@@ -9,20 +9,23 @@ static inline __attribute__((always_inline)) bool htmlUnmodified(PsychicRequest 
 
 void sendPlayerMessage(playerMessage::Type type, uint8_t value = 0, size_t offset = 0)
 {
-    static playerMessage msg;
+    playerMessage msg;
     msg.type = type;
     msg.value = value;
     msg.offset = offset;
     xQueueSend(playerQueue, &msg, portMAX_DELAY);
 }
 
-void sendServerMessage(serverMessage::Type type, const char *str = "", bool singleClient = false, size_t value = 0)
+void sendServerMessage(serverMessage::Type type, const char *str = NULL, bool singleClient = false, size_t value = 0, size_t value2 = 0)
 {
-    static serverMessage msg;
+    serverMessage msg;
     msg.type = type;
     msg.singleClient = singleClient;
     msg.value = value;
-    if (strlen(str))
+    msg.value2 = value2;
+    if (str && type == serverMessage::WS_UPDATE_STATUS )
+        snprintf(msg.str, sizeof(msg.str), "status\n%s\n", str);
+    else if (str)
         snprintf(msg.str, sizeof(msg.str), "%s", str);
     xQueueSend(serverQueue, &msg, portMAX_DELAY);
 }
@@ -80,37 +83,35 @@ static void handleFavoriteToPlaylist(PsychicRequest *request, const char *filena
         sendPlayerMessage(playerMessage::START_ITEM, playList.currentItem());
     }
 }
-
-static const String &favoritesToCStruct(String &s)
+static String favoritesToCStruct()
 {
+    String s;
     File folder = FFat.open(FAVORITES_FOLDER);
     if (!folder)
-    {
-        s = "ERROR! Could not open folder " + String(FAVORITES_FOLDER);
-        return s;
-    }
+        return "ERROR! Could not open folder " + String(FAVORITES_FOLDER);
+
     s = "const source preset[] = {\n";
     File file = folder.openNextFile();
+
     while (file)
     {
         if (!file.isDirectory() && file.size() < PLAYLIST_MAX_URL_LENGTH)
         {
-            s.concat("    {\"");
-            s.concat(file.name());
-            s.concat("\", \"");
-            char ch = (char)file.read();
-            while (file.available() && ch != '\n')
-            {
-                s.concat(ch);
-                ch = (char)file.read();
-            }
-            s.concat("\"},\n");
+            s += "    {\"";
+            s += file.name();
+            s += "\", \"";
+
+            char ch;
+            while (file.available() && (ch = (char)file.read()) != '\n')
+                s += ch;
+            s += "\"},\n";
         }
         file.close();
         file = folder.openNextFile();
     }
+
     folder.close();
-    s.concat("};\n");
+    s += "};\n";
     return s;
 }
 
@@ -260,10 +261,9 @@ static void webserverUrlSetup()
     server.on(
         "/favorites", [](PsychicRequest *request)
         {
-            String content = favoritesToCStruct(content);
             PsychicResponse response = PsychicResponse(request);
             response.addHeader("Cache-Control", "no-cache,no-store,must-revalidate,max-age=0");
-            response.setContent(content.c_str());
+            response.setContent(favoritesToCStruct().c_str());
             return response.send(); });
 
     constexpr const char *MIMETYPE_SVG{"image/svg+xml"};
@@ -586,7 +586,7 @@ static esp_err_t wsFrameHandler(PsychicWebSocketRequest *request, httpd_ws_frame
                               "ERROR: Could not add new url to playlist", true, request->client()->socket());
             return ESP_OK;
         }
-        
+
         const char *url = strtok(NULL, "\n");
         if (!url)
             return ESP_OK;

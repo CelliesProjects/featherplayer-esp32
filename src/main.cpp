@@ -26,8 +26,12 @@ QueueHandle_t playerQueue = nullptr;
 QueueHandle_t serverQueue = nullptr;
 
 extern void tftTask(void *parameter);
+
 extern void serverTask(void *parameter);
+extern void sendServerMessage(serverMessage::Type type, const char *str = NULL, bool singleClient = false, size_t value = 0, size_t value2 = 0);
+
 extern void playerTask(void *parameter);
+extern void sendPlayerMessage(playerMessage::Type type, uint8_t value = 0, size_t offset = 0);
 
 void mountSDcard()
 {
@@ -237,21 +241,12 @@ void loop() {}
 
 void audio_eof_stream(const char *info)
 {
-    playerMessage msg;
-    msg.type = playerMessage::START_ITEM;
-    msg.value = playList.currentItem() + 1;
-    xQueueSend(playerQueue, &msg, portMAX_DELAY);
+    sendPlayerMessage(playerMessage::START_ITEM, playList.currentItem() + 1);
 }
 
 void audio_showstreamtitle(const char *info)
 {
-    log_d("STREAMTITLE: %s", info);
-    {
-        serverMessage msg;
-        msg.type = serverMessage::WS_UPDATE_STREAMTITLE;
-        snprintf(msg.str, sizeof(msg.str), "%s", info);
-        xQueueSend(serverQueue, &msg, portMAX_DELAY);
-    }
+    sendServerMessage(serverMessage::WS_UPDATE_STREAMTITLE, info);
 
     tftMessage msg;
     msg.type = tftMessage::SHOW_TITLE;
@@ -261,10 +256,5 @@ void audio_showstreamtitle(const char *info)
 
 void audio_showstation(const char *info)
 {
-    log_d("STATION: %s", info);
-
-    serverMessage msg;
-    msg.type = serverMessage::WS_UPDATE_STATION;
-    snprintf(msg.str, sizeof(msg.str), "%s", info);
-    xQueueSend(serverQueue, &msg, portMAX_DELAY);
+    sendServerMessage(serverMessage::WS_UPDATE_STATION, info);
 }

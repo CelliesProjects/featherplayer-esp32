@@ -15,10 +15,10 @@ struct serverMessage
         WS_UPDATE_STATUS
     };
     Type type;
-    size_t value;
-    size_t value2;
     char str[160]{};
     bool singleClient = false;
+    size_t value;
+    size_t value2;
 };
 
 #endif
