@@ -74,10 +74,10 @@ void playerTask(void *parameter)
                     }
 
                     xSemaphoreTake(spiMutex, portMAX_DELAY);
-                    const auto result = audio.connecttohost(playList.url(playList.currentItem()).c_str(), LIBRARY_USER, LIBRARY_PWD, msg.offset);
+                    const auto success = audio.connecttohost(playList.url(playList.currentItem()).c_str(), LIBRARY_USER, LIBRARY_PWD, msg.offset);
                     xSemaphoreGive(spiMutex);
 
-                    if (result)
+                    if (success)
                         break;
 
                     log_w("item %i failed to start", playList.currentItem());
@@ -93,7 +93,6 @@ void playerTask(void *parameter)
                         snprintf(buff, 32, "%s %u kbps", audio.currentCodec(), audio.bitrate());
                     else
                         snprintf(buff, 32, "%s", audio.currentCodec());
-
                     sendTftMessage(tftMessage::SHOW_CODEC, buff);
                 }
 
@@ -126,13 +125,6 @@ void playerTask(void *parameter)
         constexpr const auto UPDATE_INTERVAL_MS = 1000 / MAX_UPDATE_FREQ_HZ;
         static unsigned long savedTime = millis();
 
-        if (audio.isRunning()) /* send buffer status to tft */
-        {
-            size_t used, capacity;
-            audio.bufferStatus(used, capacity);
-            sendTftMessage(tftMessage::BUFFER_STATUS, NULL, used, capacity);
-        }
-
         if (audio.size() && millis() - savedTime > UPDATE_INTERVAL_MS)
         {
             log_d("Buffer status: %s", audio.bufferStatus());
@@ -143,6 +135,10 @@ void playerTask(void *parameter)
 
         if (audio.isRunning())
         {
+            size_t used, capacity;
+            audio.bufferStatus(used, capacity);
+            sendTftMessage(tftMessage::BUFFER_STATUS, NULL, used, capacity);
+
             xSemaphoreTake(spiMutex, portMAX_DELAY);
             audio.loop();
             xSemaphoreGive(spiMutex);
