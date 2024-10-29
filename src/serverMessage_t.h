@@ -1,5 +1,5 @@
-#ifndef _SERVER_MESSGE_
-#define _SERVER_MESSGE_
+#ifndef _SERVER_MESSAGE_
+#define _SERVER_MESSAGE_
 struct serverMessage
 {
     enum Type
