@@ -231,6 +231,10 @@ void audio_eof_stream(const char *info)
 
 void audio_showstreamtitle(const char *info)
 {
+    static char buff[256];
+    if (!strcmp(info, buff))
+        return;
+    snprintf(buff, 256, "%s", info);
     sendServerMessage(serverMessage::WS_UPDATE_STREAMTITLE, info);
     sendTftMessage(tftMessage::SHOW_TITLE, info);
 }
