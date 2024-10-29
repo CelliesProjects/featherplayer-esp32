@@ -20,6 +20,4 @@ float map_range(const float input,
 
 void tftTask(void *parameter);
  
-
-
 #endif

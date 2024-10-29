@@ -18,3 +18,4 @@ const char* nosslicon = R"====(<svg xmlns="http://www.w3.org/2000/svg" height="2
 */
 
 #endif
+
