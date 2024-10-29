@@ -1,5 +1,72 @@
 #include "playertask.h"
 
+static void startItem(ESP32_VS1053_Stream &audio, playerMessage &msg)
+{
+    if (audio.isRunning())
+    {
+        xSemaphoreTake(spiMutex, portMAX_DELAY);
+        audio.stopSong();
+        xSemaphoreGive(spiMutex);
+    }
+
+    if (msg.value >= playList.size())
+    {
+        log_w("playlist ended");
+        playListEnd();
+        return;
+    }
+
+    playList.setCurrentItem(msg.value);
+
+    if (_paused)
+        sendServerMessage(serverMessage::WS_UPDATE_STATUS, "playing");
+    _paused = false;
+
+    if (!msg.offset)
+    {
+        sendTftMessage(tftMessage::SHOW_TITLE, "\0");
+        sendTftMessage(tftMessage::CLEAR_SCREEN);
+        sendServerMessage(serverMessage::WS_UPDATE_STREAMTITLE);
+    }
+
+    /* keep trying until some stream starts or we reach the end of playlist */
+    while (playList.currentItem() < playList.size())
+    {
+        if (!msg.offset)
+        {
+            sendTftMessage(tftMessage::SHOW_STATION, playList.name(playList.currentItem()).c_str());
+            sendServerMessage(serverMessage::WS_UPDATE_NOWPLAYING);
+            sendServerMessage(serverMessage::WS_UPDATE_STATION, playList.name(playList.currentItem()).c_str());
+        }
+
+        xSemaphoreTake(spiMutex, portMAX_DELAY);
+        const auto success = audio.connecttohost(playList.url(playList.currentItem()).c_str(), LIBRARY_USER, LIBRARY_PWD, msg.offset);
+        xSemaphoreGive(spiMutex);
+
+        if (success)
+            break;
+
+        msg.offset = 0; // do not loop through the playlist with an offset
+        log_w("item %i failed to start", playList.currentItem());
+        playList.setCurrentItem(playList.currentItem() + 1);
+
+        sendTftMessage(tftMessage::CLEAR_SCREEN);
+    }
+
+    if (audio.isRunning())
+    {
+        char buff[32];
+        if (audio.bitrate())
+            snprintf(buff, 32, "%s %u kbps", audio.currentCodec(), audio.bitrate());
+        else
+            snprintf(buff, 32, "%s", audio.currentCodec());
+        sendTftMessage(tftMessage::SHOW_CODEC, buff);
+    }
+
+    if (!audio.isRunning())
+        playListEnd();
+}
+
 void playerTask(void *parameter)
 {
     sendTftMessage(tftMessage::SYSTEM_MESSAGE, "Starting codec...");
@@ -15,7 +82,7 @@ void playerTask(void *parameter)
     }
     xSemaphoreGive(spiMutex);
 
-    playListEnd();
+    playListEnd(); // this puts the system in a known state
 
     log_i("Ready to rock!");
 
@@ -37,69 +104,7 @@ void playerTask(void *parameter)
                 break;
 
             case playerMessage::START_ITEM:
-                if (audio.isRunning())
-                {
-                    xSemaphoreTake(spiMutex, portMAX_DELAY);
-                    audio.stopSong();
-                    xSemaphoreGive(spiMutex);
-                }
-
-                if (msg.value >= playList.size())
-                {
-                    log_w("playlist ended");
-                    playListEnd();
-                    break;
-                }
-
-                playList.setCurrentItem(msg.value);
-
-                if (_paused)
-                    sendServerMessage(serverMessage::WS_UPDATE_STATUS, "playing");
-
-                if (!msg.offset)
-                {
-                    sendTftMessage(tftMessage::SHOW_TITLE, "\0");
-                    sendTftMessage(tftMessage::CLEAR_SCREEN);
-                    sendServerMessage(serverMessage::WS_UPDATE_STREAMTITLE);
-                }
-
-                /* keep trying until some stream starts or we reach the end of playlist */
-                while (playList.currentItem() < playList.size())
-                {
-                    if (!msg.offset)
-                    {
-                        sendServerMessage(serverMessage::WS_UPDATE_NOWPLAYING);
-                        sendServerMessage(serverMessage::WS_UPDATE_STATION, playList.name(playList.currentItem()).c_str());
-                        sendTftMessage(tftMessage::SHOW_STATION, playList.name(playList.currentItem()).c_str());
-                    }
-
-                    xSemaphoreTake(spiMutex, portMAX_DELAY);
-                    const auto success = audio.connecttohost(playList.url(playList.currentItem()).c_str(), LIBRARY_USER, LIBRARY_PWD, msg.offset);
-                    xSemaphoreGive(spiMutex);
-
-                    if (success)
-                        break;
-
-                    log_w("item %i failed to start", playList.currentItem());
-                    playList.setCurrentItem(playList.currentItem() + 1);
-
-                    sendTftMessage(tftMessage::CLEAR_SCREEN);
-                }
-
-                if (audio.isRunning())
-                {
-                    char buff[32];
-                    if (audio.bitrate())
-                        snprintf(buff, 32, "%s %u kbps", audio.currentCodec(), audio.bitrate());
-                    else
-                        snprintf(buff, 32, "%s", audio.currentCodec());
-                    sendTftMessage(tftMessage::SHOW_CODEC, buff);
-                }
-
-                _paused = false;
-
-                if (!audio.isRunning())
-                    playListEnd();
+                startItem(audio, msg);
                 break;
 
             case playerMessage::PAUSE:
@@ -128,8 +133,8 @@ void playerTask(void *parameter)
         if (audio.size() && millis() - savedTime > UPDATE_INTERVAL_MS)
         {
             log_d("Buffer status: %s", audio.bufferStatus());
-            sendServerMessage(serverMessage::WS_UPDATE_PROGRESS, NULL, false, audio.position(), audio.size());
             sendTftMessage(tftMessage::PROGRESS_BAR, NULL, audio.position(), audio.size());
+            sendServerMessage(serverMessage::WS_UPDATE_PROGRESS, NULL, false, audio.position(), audio.size());
             savedTime = millis();
         }
 
@@ -150,16 +155,16 @@ void playListEnd()
 {
     playList.setCurrentItem(PLAYLIST_STOPPED);
 
-    sendServerMessage(serverMessage::WS_UPDATE_NOWPLAYING);
+    sendTftMessage(tftMessage::SHOW_IPADDRESS);
+    sendTftMessage(tftMessage::SHOW_CLOCK);
 
     char buff[150];
     snprintf(buff, 150, "%s %s", PROGRAM_NAME, GIT_VERSION);
-    sendServerMessage(serverMessage::WS_UPDATE_STATION, buff);
     sendTftMessage(tftMessage::SHOW_TITLE, buff);
+    sendServerMessage(serverMessage::WS_UPDATE_STATION, buff);
 
     snprintf(buff, 150, "%s", "Search API provided by: <a href=\"https://www.radio-browser.info/\" target=\"_blank\"><span style=\"white-space:nowrap;\">radio-browser.info</span></a>");
     sendServerMessage(serverMessage::WS_UPDATE_STREAMTITLE, buff);
+    sendServerMessage(serverMessage::WS_UPDATE_NOWPLAYING);
 
-    sendTftMessage(tftMessage::SHOW_IPADDRESS);
-    sendTftMessage(tftMessage::SHOW_CLOCK);
 }
