@@ -12,6 +12,10 @@
 
 PsychicHttpServer server;
 PsychicWebSocketHandler websocketHandler;
+size_t _savedPosition = 0;
+
+static char showStation[300]{};
+static char streamTitle[300]{};
 
 extern void playListEnd();
 extern String percentEncode(const char *plaintext);
@@ -21,8 +25,6 @@ extern playList_t playList;
 extern QueueHandle_t serverQueue;
 extern QueueHandle_t playerQueue;
 extern bool _paused;
-
-size_t _savedPosition = 0;
 
 // icons used in webif
 extern const char *radioicon;
@@ -37,8 +39,5 @@ extern const char *starticon;
 extern const char *pauseicon;
 extern const char *searchicon;
 extern const char *nosslicon;
-
-static char showStation[300]{};
-static char streamTitle[300]{};
 
 #endif

@@ -194,7 +194,7 @@ void tftTask(void *parameter)
             int16_t ypos;
             uint16_t height;
             uint16_t width;
-            strftime(buff, sizeof(buff), "%R", timeinfo);
+            strftime(buff, 12, "%R", timeinfo);
             clock.getTextBounds(buff, 0, 0, &xpos, &ypos, &width, &height);
             clock.setTextColor(TEXT_COLOR);
             clock.setCursor((clock.width() / 2) - (width / 2) - 5, TOP_OF_SCROLLER - 6);

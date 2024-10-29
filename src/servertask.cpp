@@ -31,7 +31,7 @@ void sendServerMessage(serverMessage::Type type, const char *str = NULL, bool si
 static const char *currentPlayingItem()
 {
     static char buff[25];
-    snprintf(buff, sizeof(buff), "currentPLitem\n%i\n", playList.currentItem());
+    snprintf(buff, 25, "currentPLitem\n%i\n", playList.currentItem());
     return buff;
 }
 
@@ -317,16 +317,16 @@ static void webserverUrlSetup()
 
 static void wsNewClientHandler(PsychicWebSocketClient *client)
 {
-    log_i("[socket] connection #%u connected from %s", client->socket(), client->remoteIP().toString().c_str());
+    log_v("[socket] connection #%u connected from %s", client->socket(), client->remoteIP().toString().c_str());
 
     client->sendMessage(streamTitle);
     client->sendMessage(showStation);
 
     char buff[32];
-    snprintf(buff, sizeof(buff), "volume\n%i\n", _playerVolume);
+    snprintf(buff, 32, "volume\n%i\n", _playerVolume);
     client->sendMessage(buff);
 
-    snprintf(buff, sizeof(buff), "status\n%s\n", _paused ? "paused" : "playing");
+    snprintf(buff, 32, "status\n%s\n", _paused ? "paused" : "playing");
     client->sendMessage(buff);
 
 

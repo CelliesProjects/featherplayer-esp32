@@ -1,5 +1,22 @@
 #include "playertask.h"
 
+void playListEnd()
+{
+    playList.setCurrentItem(PLAYLIST_STOPPED);
+
+    sendTftMessage(tftMessage::SHOW_IPADDRESS);
+    sendTftMessage(tftMessage::SHOW_CLOCK);
+
+    char buff[150];
+    snprintf(buff, 150, "%s %s", PROGRAM_NAME, GIT_VERSION);
+    sendTftMessage(tftMessage::SHOW_TITLE, buff);
+    sendServerMessage(serverMessage::WS_UPDATE_STATION, buff);
+
+    snprintf(buff, 150, "%s", "Search API provided by: <a href=\"https://www.radio-browser.info/\" target=\"_blank\"><span style=\"white-space:nowrap;\">radio-browser.info</span></a>");
+    sendServerMessage(serverMessage::WS_UPDATE_STREAMTITLE, buff);
+    sendServerMessage(serverMessage::WS_UPDATE_NOWPLAYING);
+}
+
 static void startItem(ESP32_VS1053_Stream &audio, playerMessage &msg)
 {
     if (audio.isRunning())
@@ -42,8 +59,9 @@ static void startItem(ESP32_VS1053_Stream &audio, playerMessage &msg)
         if (success)
             break;
 
-        msg.offset = 0; // do not loop through the playlist with an offset
         log_w("item %i failed to start", playList.currentItem());
+
+        msg.offset = 0; // do not loop through the playlist with an offset
         playList.setCurrentItem(playList.currentItem() + 1);
 
         sendTftMessage(tftMessage::CLEAR_SCREEN);
@@ -58,8 +76,7 @@ static void startItem(ESP32_VS1053_Stream &audio, playerMessage &msg)
             snprintf(buff, 32, "%s", audio.currentCodec());
         sendTftMessage(tftMessage::SHOW_CODEC, buff);
     }
-
-    if (!audio.isRunning())
+    else
         playListEnd();
 }
 
@@ -73,12 +90,13 @@ void playerTask(void *parameter)
     if (!audio.startDecoder(VS1053_CS, VS1053_DCS, VS1053_DREQ) || !audio.isChipConnected())
     {
         log_e("VS1053 board could not init. System HALTED!");
+        sendTftMessage(tftMessage::SYSTEM_MESSAGE, "VS1053 ERROR. System HALTED.");
         while (1)
             delay(100);
     }
     xSemaphoreGive(spiMutex);
 
-    playListEnd(); // this puts the system in a known state
+    playListEnd(); // this puts the audio system in a known state
 
     log_i("Ready to rock!");
 
@@ -145,21 +163,4 @@ void playerTask(void *parameter)
             xSemaphoreGive(spiMutex);
         }
     }
-}
-
-void playListEnd()
-{
-    playList.setCurrentItem(PLAYLIST_STOPPED);
-
-    sendTftMessage(tftMessage::SHOW_IPADDRESS);
-    sendTftMessage(tftMessage::SHOW_CLOCK);
-
-    char buff[150];
-    snprintf(buff, 150, "%s %s", PROGRAM_NAME, GIT_VERSION);
-    sendTftMessage(tftMessage::SHOW_TITLE, buff);
-    sendServerMessage(serverMessage::WS_UPDATE_STATION, buff);
-
-    snprintf(buff, 150, "%s", "Search API provided by: <a href=\"https://www.radio-browser.info/\" target=\"_blank\"><span style=\"white-space:nowrap;\">radio-browser.info</span></a>");
-    sendServerMessage(serverMessage::WS_UPDATE_STREAMTITLE, buff);
-    sendServerMessage(serverMessage::WS_UPDATE_NOWPLAYING);
 }

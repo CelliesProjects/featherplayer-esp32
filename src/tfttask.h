@@ -14,10 +14,4 @@ extern const char *PROGRAM_NAME;
 extern SemaphoreHandle_t spiMutex;
 extern QueueHandle_t tftQueue;
 
-float map_range(const float input,
-                const float input_start, const float input_end,
-                const float output_start, const float output_end);
-
-void tftTask(void *parameter);
- 
 #endif
