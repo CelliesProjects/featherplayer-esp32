@@ -23,7 +23,7 @@ void sendServerMessage(serverMessage::Type type, const char *str = NULL, bool si
     msg.singleClient = singleClient;
     msg.value = value;
     msg.value2 = value2;
-    if (str && type == serverMessage::WS_UPDATE_STATUS )
+    if (str && type == serverMessage::WS_UPDATE_STATUS)
         snprintf(msg.str, sizeof(msg.str), "status\n%s\n", str);
     else if (str)
         snprintf(msg.str, sizeof(msg.str), "%s", str);
@@ -83,19 +83,22 @@ static void handleFavoriteToPlaylist(PsychicRequest *request, const char *filena
         sendPlayerMessage(playerMessage::START_ITEM, playList.currentItem());
     }
 }
+
 static String favoritesToCStruct()
 {
     String s;
     File folder = FFat.open(FAVORITES_FOLDER);
-    if (!folder)
-        return "ERROR! Could not open folder " + String(FAVORITES_FOLDER);
+    if (!folder || !folder.isDirectory())
+    {
+        s = "ERROR! Could not open folder: " + String(FAVORITES_FOLDER);
+        return s;
+    }
 
     s = "const source preset[] = {\n";
     File file = folder.openNextFile();
-
     while (file)
     {
-        if (!file.isDirectory() && file.size() < PLAYLIST_MAX_URL_LENGTH)
+        if (!file.isDirectory() && file.size() > 0 && file.size() < PLAYLIST_MAX_URL_LENGTH)
         {
             s += "    {\"";
             s += file.name();
@@ -106,6 +109,9 @@ static String favoritesToCStruct()
                 s += ch;
             s += "\"},\n";
         }
+        else
+            log_e("Skipping invalid file: %s (Size: %u bytes)", file.name(), (uint32_t)file.size());
+
         file.close();
         file = folder.openNextFile();
     }
