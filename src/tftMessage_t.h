@@ -5,7 +5,7 @@
 
 struct tftMessage
 {
-    enum type
+    enum Type
     {
         SYSTEM_MESSAGE,
         PROGRESS_BAR,
@@ -17,7 +17,7 @@ struct tftMessage
         SHOW_CLOCK,
         BUFFER_STATUS
     };
-    type type;
+    Type type;
     char str[256];
     size_t value1 = 0;
     size_t value2 = 0;

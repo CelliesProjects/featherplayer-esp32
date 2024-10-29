@@ -27,5 +27,5 @@ extern size_t _savedPosition;
 void playListEnd();
 extern void sendPlayerMessage(playerMessage::Type type, uint8_t value = 0, size_t offset = 0);
 extern void sendServerMessage(serverMessage::Type type, const char *str = NULL, bool singleClient = false, size_t value = 0, size_t value2 = 0);
-
+extern void sendTftMessage(tftMessage::Type type, const char *str = "", size_t value1 = 0, size_t value2 = 0);
 #endif

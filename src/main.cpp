@@ -25,13 +25,14 @@ QueueHandle_t tftQueue = nullptr;
 QueueHandle_t playerQueue = nullptr;
 QueueHandle_t serverQueue = nullptr;
 
-extern void tftTask(void *parameter);
-
 extern void serverTask(void *parameter);
 extern void sendServerMessage(serverMessage::Type type, const char *str = NULL, bool singleClient = false, size_t value = 0, size_t value2 = 0);
 
 extern void playerTask(void *parameter);
 extern void sendPlayerMessage(playerMessage::Type type, uint8_t value = 0, size_t offset = 0);
+
+extern void tftTask(void *parameter);
+extern void sendTftMessage(tftMessage::Type type, const char *str = "", size_t value1 = 0, size_t value2 = 0);
 
 void mountSDcard()
 {
@@ -151,10 +152,8 @@ void setup()
     /* partition is present, but does not mount so now we just format it */
     else
     {
-        tftMessage msg;
-        msg.type = tftMessage::SYSTEM_MESSAGE;
-        snprintf(msg.str, sizeof(msg.str), "Formatting, please wait...");
-        xQueueSend(tftQueue, &msg, portMAX_DELAY);
+        sendTftMessage(tftMessage::SYSTEM_MESSAGE, "Formatting, please wait...");
+
         delay(2);
 
         log_i("Formatting FFat...");
@@ -166,13 +165,7 @@ void setup()
         }
     }
 
-    {
-        tftMessage msg;
-        msg.type = tftMessage::SYSTEM_MESSAGE;
-        snprintf(msg.str, sizeof(msg.str), "Connecting WiFi...");
-        xQueueSend(tftQueue, &msg, portMAX_DELAY);
-    }
-    delay(2);
+    sendTftMessage(tftMessage::SYSTEM_MESSAGE, "Connecting WiFi...");
 
     log_i("FeatherPlayer esp32 connecting to %s", SSID);
 
@@ -186,18 +179,10 @@ void setup()
 
     configTzTime(TIMEZONE, NTP_POOL);
 
-    struct tm timeinfo
-    {
-    };
+    struct tm timeinfo = {0};
 
     log_i("Waiting for NTP sync...");
-    {
-        tftMessage msg;
-        msg.type = tftMessage::SYSTEM_MESSAGE;
-        snprintf(msg.str, sizeof(msg.str), "Synching NTP...");
-        xQueueSend(tftQueue, &msg, portMAX_DELAY);
-    }
-    delay(2);
+    sendTftMessage(tftMessage::SYSTEM_MESSAGE, "Synching NTP...");
 
     while (!getLocalTime(&timeinfo, 0))
         delay(10);
@@ -209,7 +194,7 @@ void setup()
         "playerTask",
         6144,
         NULL,
-        tskIDLE_PRIORITY + 1,
+        tskIDLE_PRIORITY + 2,
         NULL);
 
     if (taskResult != pdPASS)
@@ -247,11 +232,7 @@ void audio_eof_stream(const char *info)
 void audio_showstreamtitle(const char *info)
 {
     sendServerMessage(serverMessage::WS_UPDATE_STREAMTITLE, info);
-
-    tftMessage msg;
-    msg.type = tftMessage::SHOW_TITLE;
-    snprintf(msg.str, sizeof(msg.str), "%s", info);
-    xQueueSend(tftQueue, &msg, portMAX_DELAY);
+    sendTftMessage(tftMessage::SHOW_TITLE, info);
 }
 
 void audio_showstation(const char *info)

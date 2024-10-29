@@ -1,5 +1,16 @@
 #include "tfttask.h"
 
+void sendTftMessage(tftMessage::Type type, const char *str = NULL, size_t value1 = 0, size_t value2 = 0)
+{
+    tftMessage msg;
+    msg.type = type;
+    msg.value1 = value1;
+    msg.value2 = value2;
+    if (str)
+        snprintf(msg.str, sizeof(msg.str), "%s", str);
+    xQueueSend(tftQueue, &msg, portMAX_DELAY);
+}
+
 float map_range(const float input,
                 const float input_start, const float input_end,
                 const float output_start, const float output_end)
