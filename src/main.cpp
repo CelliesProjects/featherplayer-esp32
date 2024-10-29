@@ -32,7 +32,7 @@ extern void playerTask(void *parameter);
 extern void sendPlayerMessage(playerMessage::Type type, uint8_t value = 0, size_t offset = 0);
 
 extern void tftTask(void *parameter);
-extern void sendTftMessage(tftMessage::Type type, const char *str = "", size_t value1 = 0, size_t value2 = 0);
+extern void sendTftMessage(tftMessage::Type type, const char *str = NULL, size_t value1 = 0, size_t value2 = 0);
 
 void mountSDcard()
 {
@@ -179,7 +179,7 @@ void setup()
 
     configTzTime(TIMEZONE, NTP_POOL);
 
-    struct tm timeinfo = {0};
+    struct tm timeinfo = {};
 
     log_i("Waiting for NTP sync...");
     sendTftMessage(tftMessage::SYSTEM_MESSAGE, "Synching NTP...");
