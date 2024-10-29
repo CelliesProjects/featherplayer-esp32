@@ -22,20 +22,16 @@ static void startItem(ESP32_VS1053_Stream &audio, playerMessage &msg)
         sendServerMessage(serverMessage::WS_UPDATE_STATUS, "playing");
     _paused = false;
 
-    if (!msg.offset)
-    {
-        sendTftMessage(tftMessage::SHOW_TITLE, "\0");
-        sendTftMessage(tftMessage::CLEAR_SCREEN);
-        sendServerMessage(serverMessage::WS_UPDATE_STREAMTITLE);
-    }
-
     /* keep trying until some stream starts or we reach the end of playlist */
     while (playList.currentItem() < playList.size())
     {
         if (!msg.offset)
         {
+            sendTftMessage(tftMessage::SHOW_TITLE, "\0");
+            sendTftMessage(tftMessage::CLEAR_SCREEN);
             sendTftMessage(tftMessage::SHOW_STATION, playList.name(playList.currentItem()).c_str());
             sendServerMessage(serverMessage::WS_UPDATE_NOWPLAYING);
+            sendServerMessage(serverMessage::WS_UPDATE_STREAMTITLE);
             sendServerMessage(serverMessage::WS_UPDATE_STATION, playList.name(playList.currentItem()).c_str());
         }
 
