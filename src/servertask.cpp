@@ -121,26 +121,31 @@ static String favoritesToCStruct()
     return s;
 }
 
-static const String &favoritesToString(String &s)
+static String favoritesToString()
 {
-    s = "favorites\n";
+    String s = "favorites\n";
     File folder = FFat.open(FAVORITES_FOLDER);
-    if (!folder)
+    if (!folder || !folder.isDirectory())
     {
-        log_e("ERROR! Could not open favorites folder");
+        log_e("ERROR! Could not open favorites folder: %s", FAVORITES_FOLDER);
         return s;
     }
+
     File file = folder.openNextFile();
     while (file)
     {
-        if (!file.isDirectory() && file.size() < PLAYLIST_MAX_URL_LENGTH)
+        if (!file.isDirectory() && file.size() > 0 && file.size() < PLAYLIST_MAX_URL_LENGTH)
         {
-            s.concat(file.name());
-            s.concat("\n");
+            s += file.name();
+            s += "\n";
         }
+        else
+            log_e("Skipping invalid file: %s (Size: %u bytes)", file.name(), (uint32_t)file.size());
+        
         file.close();
         file = folder.openNextFile();
     }
+
     folder.close();
     return s;
 }
@@ -326,9 +331,9 @@ static void wsNewClientHandler(PsychicWebSocketClient *client)
     snprintf(buff, sizeof(buff), "status\n%s\n", _paused ? "paused" : "playing");
     client->sendMessage(buff);
 
-    String s;
-    client->sendMessage(playList.toString(s).c_str());
-    client->sendMessage(favoritesToString(s).c_str());
+
+    client->sendMessage(playList.toString().c_str());
+    client->sendMessage(favoritesToString().c_str());
 }
 
 static void updatePlaylistOverWebSocket()
@@ -647,8 +652,7 @@ void serverTask(void *parameter)
 
             case serverMessage::WS_UPDATE_PLAYLIST:
             {
-                String s;
-                websocketHandler.sendAll(playList.toString(s).c_str());
+                websocketHandler.sendAll(playList.toString().c_str());
                 break;
             }
 
@@ -667,8 +671,7 @@ void serverTask(void *parameter)
 
             case serverMessage::WS_UPDATE_FAVORITES:
             {
-                String s;
-                websocketHandler.sendAll(favoritesToString(s).c_str());
+                websocketHandler.sendAll(favoritesToString().c_str());
                 break;
             }
 

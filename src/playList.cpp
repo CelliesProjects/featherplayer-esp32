@@ -1,22 +1,32 @@
 #include "playList.h"
 
-const String &playList_t::toString(String &s)
+String playList_t::toString()
 {
-    s = "playlist\n";
+    String s = "playlist\n";
     s.concat(currentItem());
     s.concat('\n');
+
     std::lock_guard<std::mutex> lock(listMutex);
+
     for (const auto &item : list)
     {
+        if (item.type < 0 || item.type >= sizeof(typeStr) / sizeof(typeStr[0]))
+        {
+            log_e("ERROR! Playlist item has an invalid type: %d", item.type);
+            continue;
+        }
+
         switch (item.type)
         {
-
         case HTTP_FILE:
             s.concat(item.url.substring(item.url.lastIndexOf("/") + 1) + "\n" + typeStr[item.type] + "\n");
             break;
 
         case HTTP_PRESET:
-            s.concat(preset[item.index].name + "\n" + typeStr[item.type] + "\n");
+            if (item.index < NUMBER_OF_PRESETS)
+                s.concat(preset[item.index].name + "\n" + typeStr[item.type] + "\n");
+            else
+                log_e("ERROR! Invalid preset index: %u", item.index);
             break;
 
         case HTTP_FOUND:
@@ -25,7 +35,7 @@ const String &playList_t::toString(String &s)
             break;
 
         default:
-            log_e("ERROR! Playlist 'item.type' has no handler!");
+            log_e("ERROR! Unhandled item type: %d", item.type);
             break;
         }
     }
