@@ -23,9 +23,7 @@ void sendServerMessage(serverMessage::Type type, const char *str = NULL, bool si
     msg.singleClient = singleClient;
     msg.value = value;
     msg.value2 = value2;
-    if (str && type == serverMessage::WS_UPDATE_STATUS)
-        snprintf(msg.str, sizeof(msg.str), "status\n%s\n", str);
-    else if (str)
+    if (str)
         snprintf(msg.str, sizeof(msg.str), "%s", str);
     xQueueSend(serverQueue, &msg, portMAX_DELAY);
 }

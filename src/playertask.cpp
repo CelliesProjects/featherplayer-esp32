@@ -166,5 +166,4 @@ void playListEnd()
     snprintf(buff, 150, "%s", "Search API provided by: <a href=\"https://www.radio-browser.info/\" target=\"_blank\"><span style=\"white-space:nowrap;\">radio-browser.info</span></a>");
     sendServerMessage(serverMessage::WS_UPDATE_STREAMTITLE, buff);
     sendServerMessage(serverMessage::WS_UPDATE_NOWPLAYING);
-
 }
