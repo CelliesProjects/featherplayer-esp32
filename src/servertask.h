@@ -17,8 +17,10 @@ size_t _savedPosition = 0;
 static char showStation[300]{};
 static char streamTitle[300]{};
 
-extern void playListEnd();
+extern void sendPlayerMessage(playerMessage::Type type, uint8_t value = 0, size_t offset = 0);
 extern String percentEncode(const char *plaintext);
+extern void playListEnd();
+
 extern const char *FAVORITES_FOLDER;
 extern uint8_t _playerVolume;
 extern playList_t playList;

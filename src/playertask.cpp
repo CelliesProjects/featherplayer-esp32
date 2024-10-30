@@ -1,5 +1,14 @@
 #include "playertask.h"
 
+void sendPlayerMessage(playerMessage::Type type, uint8_t value = 0, size_t offset = 0)
+{
+    playerMessage msg;
+    msg.type = type;
+    msg.value = value;
+    msg.offset = offset;
+    xQueueSend(playerQueue, &msg, portMAX_DELAY);
+}
+
 void playListEnd()
 {
     playList.setCurrentItem(PLAYLIST_STOPPED);

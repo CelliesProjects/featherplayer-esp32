@@ -7,15 +7,6 @@ static inline __attribute__((always_inline)) bool htmlUnmodified(PsychicRequest 
     return request->hasHeader(HEADER_MODIFIED_SINCE) && request->header(HEADER_MODIFIED_SINCE).equals(date);
 }
 
-void sendPlayerMessage(playerMessage::Type type, uint8_t value = 0, size_t offset = 0)
-{
-    playerMessage msg;
-    msg.type = type;
-    msg.value = value;
-    msg.offset = offset;
-    xQueueSend(playerQueue, &msg, portMAX_DELAY);
-}
-
 void sendServerMessage(serverMessage::Type type, const char *str = NULL, bool singleClient = false, size_t value = 0, size_t value2 = 0)
 {
     serverMessage msg;
