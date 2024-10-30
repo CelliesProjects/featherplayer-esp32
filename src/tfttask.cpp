@@ -27,7 +27,7 @@ void tftTask(void *parameter)
     digitalWrite(TFT_I2C_POWER, HIGH);
     delay(5);
 
-    static const auto BACKGROUND_COLOR = 0x18e3; // 8 bit value = #1c1c1c dark grey
+    static const auto BACKGROUND_COLOR = 0xa0e0; // 8 bit value = #a61d04
     static const auto TEXT_COLOR = 0xf79b;       // 8 bit value = #f5f4e2 yellowish
 
     // initialize the TFT

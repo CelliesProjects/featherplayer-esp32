@@ -155,7 +155,6 @@ void playerTask(void *parameter)
 
         if (audio.size() && millis() - savedTime > UPDATE_INTERVAL_MS)
         {
-            log_d("Buffer status: %s", audio.bufferStatus());
             sendTftMessage(tftMessage::PROGRESS_BAR, NULL, audio.position(), audio.size());
             sendServerMessage(serverMessage::WS_UPDATE_PROGRESS, NULL, false, audio.position(), audio.size());
             savedTime = millis();
