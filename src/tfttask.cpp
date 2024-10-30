@@ -1,5 +1,16 @@
 #include "tfttask.h"
 
+void sendTftMessage(tftMessage::Type type, const char *str = NULL, size_t value1 = 0, size_t value2 = 0)
+{
+    tftMessage msg;
+    msg.type = type;
+    msg.value1 = value1;
+    msg.value2 = value2;
+    if (str)
+        snprintf(msg.str, sizeof(msg.str), "%s", str);
+    xQueueSend(tftQueue, &msg, portMAX_DELAY);
+}
+
 float map_range(const float input,
                 const float input_start, const float input_end,
                 const float output_start, const float output_end)
@@ -16,7 +27,7 @@ void tftTask(void *parameter)
     digitalWrite(TFT_I2C_POWER, HIGH);
     delay(5);
 
-    static const auto BACKGROUND_COLOR = 0x18e3; // 8 bit value = #1c1c1c dark grey
+    static const auto BACKGROUND_COLOR = 0xa0e0; // 8 bit value = #a61d04
     static const auto TEXT_COLOR = 0xf79b;       // 8 bit value = #f5f4e2 yellowish
 
     // initialize the TFT
@@ -53,7 +64,7 @@ void tftTask(void *parameter)
         static tftMessage msg = {};
         if (xQueueReceive(tftQueue, &msg, pdTICKS_TO_MS(25)) == pdTRUE)
         {
-            switch (msg.action)
+            switch (msg.type)
             {
             case tftMessage::SYSTEM_MESSAGE:
                 canvas.fillScreen(ST77XX_RED);
@@ -183,7 +194,7 @@ void tftTask(void *parameter)
             int16_t ypos;
             uint16_t height;
             uint16_t width;
-            strftime(buff, sizeof(buff), "%R", timeinfo);
+            strftime(buff, 12, "%R", timeinfo);
             clock.getTextBounds(buff, 0, 0, &xpos, &ypos, &width, &height);
             clock.setTextColor(TEXT_COLOR);
             clock.setCursor((clock.width() / 2) - (width / 2) - 5, TOP_OF_SCROLLER - 6);

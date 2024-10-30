@@ -1,26 +1,111 @@
 #include "playertask.h"
 
+void sendPlayerMessage(playerMessage::Type type, uint8_t value = 0, size_t offset = 0)
+{
+    playerMessage msg;
+    msg.type = type;
+    msg.value = value;
+    msg.offset = offset;
+    xQueueSend(playerQueue, &msg, portMAX_DELAY);
+}
+
+void playListEnd()
+{
+    playList.setCurrentItem(PLAYLIST_STOPPED);
+
+    sendTftMessage(tftMessage::SHOW_IPADDRESS);
+    sendTftMessage(tftMessage::SHOW_CLOCK);
+
+    char buff[150];
+    snprintf(buff, 150, "%s %s", PROGRAM_NAME, GIT_VERSION);
+    sendTftMessage(tftMessage::SHOW_TITLE, buff);
+    sendServerMessage(serverMessage::WS_UPDATE_STATION, buff);
+
+    snprintf(buff, 150, "%s", "Search API provided by: <a href=\"https://www.radio-browser.info/\" target=\"_blank\"><span style=\"white-space:nowrap;\">radio-browser.info</span></a>");
+    sendServerMessage(serverMessage::WS_UPDATE_STREAMTITLE, buff);
+    sendServerMessage(serverMessage::WS_UPDATE_NOWPLAYING);
+}
+
+static void startItem(ESP32_VS1053_Stream &audio, playerMessage &msg)
+{
+    if (audio.isRunning())
+    {
+        xSemaphoreTake(spiMutex, portMAX_DELAY);
+        audio.stopSong();
+        xSemaphoreGive(spiMutex);
+    }
+
+    if (msg.value >= playList.size())
+    {
+        log_w("playlist ended");
+        playListEnd();
+        return;
+    }
+
+    playList.setCurrentItem(msg.value);
+
+    if (_paused)
+        sendServerMessage(serverMessage::WS_UPDATE_STATUS, "playing");
+    _paused = false;
+
+    /* keep trying until some stream starts or we reach the end of playlist */
+    while (playList.currentItem() < playList.size())
+    {
+        if (!msg.offset)
+        {
+            sendTftMessage(tftMessage::SHOW_TITLE, "\0");
+            sendTftMessage(tftMessage::CLEAR_SCREEN);
+            sendTftMessage(tftMessage::SHOW_STATION, playList.name(playList.currentItem()).c_str());
+            sendServerMessage(serverMessage::WS_UPDATE_NOWPLAYING);
+            sendServerMessage(serverMessage::WS_UPDATE_STREAMTITLE);
+            sendServerMessage(serverMessage::WS_UPDATE_STATION, playList.name(playList.currentItem()).c_str());
+        }
+
+        xSemaphoreTake(spiMutex, portMAX_DELAY);
+        const auto success = audio.connecttohost(playList.url(playList.currentItem()).c_str(), LIBRARY_USER, LIBRARY_PWD, msg.offset);
+        xSemaphoreGive(spiMutex);
+
+        if (success)
+            break;
+
+        log_w("item %i failed to start", playList.currentItem());
+
+        msg.offset = 0; // do not loop through the playlist with an offset
+        playList.setCurrentItem(playList.currentItem() + 1);
+
+        sendTftMessage(tftMessage::CLEAR_SCREEN);
+    }
+
+    if (audio.isRunning())
+    {
+        char buff[32];
+        if (audio.bitrate())
+            snprintf(buff, 32, "%s %u kbps", audio.currentCodec(), audio.bitrate());
+        else
+            snprintf(buff, 32, "%s", audio.currentCodec());
+        sendTftMessage(tftMessage::SHOW_CODEC, buff);
+    }
+    else
+        playListEnd();
+}
+
 void playerTask(void *parameter)
 {
-    {
-        tftMessage msg;
-        msg.action = tftMessage::SYSTEM_MESSAGE;
-        snprintf(msg.str, sizeof(msg.str), "Starting codec...");
-        xQueueSend(tftQueue, &msg, portMAX_DELAY);
-        delay(4);
-    }
+    sendTftMessage(tftMessage::SYSTEM_MESSAGE, "Starting codec...");
+
     static ESP32_VS1053_Stream audio;
 
     xSemaphoreTake(spiMutex, portMAX_DELAY);
     if (!audio.startDecoder(VS1053_CS, VS1053_DCS, VS1053_DREQ) || !audio.isChipConnected())
     {
         log_e("VS1053 board could not init. System HALTED!");
+        sendTftMessage(tftMessage::SYSTEM_MESSAGE, "VS1053 ERROR. System HALTED.");
         while (1)
             delay(100);
     }
     xSemaphoreGive(spiMutex);
 
-    playListEnd();
+    playListEnd(); // this puts the audio system in a known state
 
     log_i("Ready to rock!");
 
@@ -29,112 +114,20 @@ void playerTask(void *parameter)
         static playerMessage msg;
         if (xQueueReceive(playerQueue, &msg, pdMS_TO_TICKS(25)) == pdTRUE)
         {
-            switch (msg.action)
+            switch (msg.type)
             {
 
             case playerMessage::SET_VOLUME:
                 _playerVolume = msg.value > VS1053_MAXVOLUME ? VS1053_MAXVOLUME : msg.value;
-                {
-                    serverMessage msg;
-                    msg.type = serverMessage::WS_UPDATE_VOLUME;
-                    msg.value = _playerVolume;
-                    xQueueSend(serverQueue, &msg, portMAX_DELAY);
-                }
+                sendServerMessage(serverMessage::WS_UPDATE_VOLUME, NULL, false, _playerVolume);
+
                 xSemaphoreTake(spiMutex, portMAX_DELAY);
                 audio.setVolume(_playerVolume);
                 xSemaphoreGive(spiMutex);
                 break;
 
             case playerMessage::START_ITEM:
-                if (audio.isRunning())
-                {
-                    xSemaphoreTake(spiMutex, portMAX_DELAY);
-                    audio.stopSong();
-                    xSemaphoreGive(spiMutex);
-                }
-
-                if (msg.value >= playList.size())
-                {
-                    log_w("playlist ended");
-                    playListEnd();
-                    break;
-                }
-
-                playList.setCurrentItem(msg.value);
-
-                if (_paused)
-                {
-                    serverMessage msg;
-                    msg.type = serverMessage::WS_UPDATE_STATUS;
-                    snprintf(msg.str, sizeof(msg.str), "playing");
-                    xQueueSend(serverQueue, &msg, portMAX_DELAY);
-                }
-
-                if (!msg.offset)
-                {
-                    {
-                        tftMessage msg;
-                        msg.action = tftMessage::CLEAR_SCREEN;
-                        xQueueSend(tftQueue, &msg, portMAX_DELAY);
-
-                        msg.str[0] = 0;
-                        msg.action = tftMessage::SHOW_TITLE; // send empty title to tft to erase the scrollbar
-                        xQueueSend(tftQueue, &msg, portMAX_DELAY);
-                    }
-
-                    serverMessage msg;
-                    msg.str[0] = 0;
-                    msg.type = serverMessage::WS_UPDATE_STREAMTITLE; // send empty title to websocket clients
-                    xQueueSend(serverQueue, &msg, portMAX_DELAY);
-                }
-
-                /* keep trying until some stream starts or we reach the end of playlist */
-                while (playList.currentItem() < playList.size())
-                {
-                    if (!msg.offset)
-                    {
-                        {
-                            serverMessage msg;
-                            msg.type = serverMessage::WS_UPDATE_NOWPLAYING;
-                            xQueueSend(serverQueue, &msg, portMAX_DELAY);
-
-                            msg.type = serverMessage::WS_UPDATE_STATION;
-                            snprintf(msg.str, sizeof(msg.str), "%s", playList.name(playList.currentItem()).c_str());
-                            xQueueSend(serverQueue, &msg, portMAX_DELAY);
-                        }
-
-                        tftMessage msg;
-                        msg.action = tftMessage::SHOW_STATION;
-                        snprintf(msg.str, sizeof(msg.str), "%s", playList.name(playList.currentItem()).c_str());
-                        xQueueSend(tftQueue, &msg, portMAX_DELAY);
-                    }
-
-                    xSemaphoreTake(spiMutex, portMAX_DELAY);
-                    const auto result = audio.connecttohost(playList.url(playList.currentItem()).c_str(), LIBRARY_USER, LIBRARY_PWD, msg.offset);
-                    xSemaphoreGive(spiMutex);
-
-                    if (result)
-                        break;
-
-                    log_w("item %i failed to start", playList.currentItem());
-                    playList.setCurrentItem(playList.currentItem() + 1);
-                }
-
-                if (audio.isRunning())
-                {
-                    tftMessage msg;
-                    msg.action = tftMessage::SHOW_CODEC;
-                    if (audio.bitrate())
-                        snprintf(msg.str, sizeof(msg.str), "%s %u kbps", audio.currentCodec(), audio.bitrate());
-                    else
-                        snprintf(msg.str, sizeof(msg.str), "%s", audio.currentCodec());
-                    xQueueSend(tftQueue, &msg, portMAX_DELAY);
-                }
-
-                _paused = false;
-
-                if (!audio.isRunning())
-                    playListEnd();
+                startItem(audio, msg);
                 break;
 
             case playerMessage::PAUSE:
@@ -152,7 +145,7 @@ void playerTask(void *parameter)
                 break;
                 */
             default:
-                log_w("unhandled player message with number %i", msg.action);
+                log_w("unhandled player message with number %i", msg.type);
             }
         }
 
@@ -160,69 +153,22 @@ void playerTask(void *parameter)
         constexpr const auto UPDATE_INTERVAL_MS = 1000 / MAX_UPDATE_FREQ_HZ;
         static unsigned long savedTime = millis();
 
-        if (audio.isRunning()) /* send buffer status to tft */
-        {
-            tftMessage msg;
-            audio.bufferStatus(msg.value1, msg.value2);
-            msg.action = tftMessage::BUFFER_STATUS;
-            xQueueSend(tftQueue, &msg, portMAX_DELAY);
-        }
-
         if (audio.size() && millis() - savedTime > UPDATE_INTERVAL_MS)
         {
-            log_d("Buffer status: %s", audio.bufferStatus());
-            {
-                serverMessage msg;
-                msg.type = serverMessage::WS_UPDATE_PROGRESS;
-                msg.value = audio.position();
-                msg.value2 = audio.size();
-                xQueueSend(serverQueue, &msg, portMAX_DELAY);
-            }
-            tftMessage msg;
-            msg.action = tftMessage::PROGRESS_BAR;
-            msg.value1 = audio.position();
-            msg.value2 = audio.size();
-            xQueueSend(tftQueue, &msg, portMAX_DELAY);
-
+            sendTftMessage(tftMessage::PROGRESS_BAR, NULL, audio.position(), audio.size());
+            sendServerMessage(serverMessage::WS_UPDATE_PROGRESS, NULL, false, audio.position(), audio.size());
             savedTime = millis();
         }
 
         if (audio.isRunning())
         {
+            size_t used, capacity;
+            audio.bufferStatus(used, capacity);
+            sendTftMessage(tftMessage::BUFFER_STATUS, NULL, used, capacity);
+
             xSemaphoreTake(spiMutex, portMAX_DELAY);
             audio.loop();
             xSemaphoreGive(spiMutex);
         }
     }
-}
-
-void playListEnd()
-{
-    playList.setCurrentItem(PLAYLIST_STOPPED);
-
-    {
-        serverMessage msg;
-        msg.type = serverMessage::WS_UPDATE_NOWPLAYING;
-        xQueueSend(serverQueue, &msg, portMAX_DELAY);
-
-        snprintf(msg.str, sizeof(msg.str), "%s %s", PROGRAM_NAME, GIT_VERSION);
-        msg.type = serverMessage::WS_UPDATE_STATION;
-        xQueueSend(serverQueue, &msg, portMAX_DELAY);
-
-        snprintf(msg.str, sizeof(msg.str), "%s", "Search API provided by: <a href=\"https://www.radio-browser.info/\" target=\"_blank\"><span style=\"white-space:nowrap;\">radio-browser.info</span></a>");
-        msg.type = serverMessage::WS_UPDATE_STREAMTITLE;
-        xQueueSend(serverQueue, &msg, portMAX_DELAY);
-    }
-
-    tftMessage msg;
-
-    msg.action = tftMessage::SHOW_IPADDRESS;
-    xQueueSend(tftQueue, &msg, portMAX_DELAY);
-
-    msg.action = tftMessage::SHOW_TITLE;
-    snprintf(msg.str, sizeof(msg.str), "%s - %s", PROGRAM_NAME, GIT_VERSION);
-    xQueueSend(tftQueue, &msg, portMAX_DELAY);
-
-    msg.action = tftMessage::SHOW_CLOCK;
-    xQueueSend(tftQueue, &msg, portMAX_DELAY);
 }

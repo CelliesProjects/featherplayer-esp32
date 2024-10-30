@@ -102,7 +102,7 @@ public:
         list.clear();
     }
 
-    const String &toString(String &s);
+    String toString();
 
     int8_t currentItem()
     {

@@ -1,18 +1,22 @@
 #include <Arduino.h>
 #include <WiFi.h>
+#include <FFat.h>
 #include <FS.h>
 #include <SD.h>
+#include <ESP32_VS1053_Stream.h>
 
-#include "websocketEventHandler.h"
+#include "playList.h"
 #include "icons.h"
 #include "percentEncode.h"
 #include "WiFiCredentials.h" /* untracked file in folder include */
+#include "tftMessage_t.h"
+#include "playerMessage_t.h"
+#include "serverMessage_t.h"
 
 const char *PROGRAM_NAME = "featherplayer-esp32";
 const char *FAVORITES_FOLDER = "/"; /* if this is a folder use a closing slash */
 playList_t playList;
 uint8_t _playerVolume = VS1053_INITIALVOLUME;
-size_t _savedPosition = 0;
 bool _paused = false;
 
 SemaphoreHandle_t spiMutex = nullptr; // SPI bus is shared between playertask -VS1053- and tfttask -ST7789-
@@ -21,8 +25,19 @@ QueueHandle_t tftQueue = nullptr;
 QueueHandle_t playerQueue = nullptr;
 QueueHandle_t serverQueue = nullptr;
 
+extern void serverTask(void *parameter);
+extern void sendServerMessage(serverMessage::Type type, const char *str = NULL, bool singleClient = false, size_t value = 0, size_t value2 = 0);
+
+extern void playerTask(void *parameter);
+extern void sendPlayerMessage(playerMessage::Type type, uint8_t value = 0, size_t offset = 0);
+
+extern void tftTask(void *parameter);
+extern void sendTftMessage(tftMessage::Type type, const char *str = NULL, size_t value1 = 0, size_t value2 = 0);
+
 void mountSDcard()
 {
+    const int SDREADER_CS = 5;
+
     if (!SD.begin(SDREADER_CS))
     {
         log_e("Card Mount Failed");
@@ -112,7 +127,7 @@ void setup()
         "tftTask",
         4096,
         NULL,
-        tskIDLE_PRIORITY + 16,
+        tskIDLE_PRIORITY + 10,
         NULL);
 
     if (taskResult != pdPASS)
@@ -137,14 +152,12 @@ void setup()
     /* partition is present, but does not mount so now we just format it */
     else
     {
-        tftMessage msg;
-        msg.action = tftMessage::SYSTEM_MESSAGE;
-        snprintf(msg.str, sizeof(msg.str), "Formatting, please wait...");
-        xQueueSend(tftQueue, &msg, portMAX_DELAY);
+        sendTftMessage(tftMessage::SYSTEM_MESSAGE, "Formatting, please wait...");
+
         delay(2);
 
         log_i("Formatting FFat...");
-        if (!FFat.format(true, (char *)"ffat") || !FFat.begin(0, "", 2))
+        if (!FFat.format(true) || !FFat.begin(0, "", 2))
         {
             log_e("FFat error while formatting. Halting.");
             while (true)
@@ -152,13 +165,7 @@ void setup()
         }
     }
 
-    {
-        tftMessage msg;
-        msg.action = tftMessage::SYSTEM_MESSAGE;
-        snprintf(msg.str, sizeof(msg.str), "Connecting WiFi...");
-        xQueueSend(tftQueue, &msg, portMAX_DELAY);
-    }
-    delay(2);
+    sendTftMessage(tftMessage::SYSTEM_MESSAGE, "Connecting WiFi...");
 
     log_i("FeatherPlayer esp32 connecting to %s", SSID);
 
@@ -172,18 +179,10 @@ void setup()
 
     configTzTime(TIMEZONE, NTP_POOL);
 
-    struct tm timeinfo
-    {
-    };
+    struct tm timeinfo = {};
 
     log_i("Waiting for NTP sync...");
-    {
-        tftMessage msg;
-        msg.action = tftMessage::SYSTEM_MESSAGE;
-        snprintf(msg.str, sizeof(msg.str), "Synching NTP...");
-        xQueueSend(tftQueue, &msg, portMAX_DELAY);
-    }
-    delay(2);
+    sendTftMessage(tftMessage::SYSTEM_MESSAGE, "Synching NTP...");
 
     while (!getLocalTime(&timeinfo, 0))
         delay(10);
@@ -195,7 +194,7 @@ void setup()
         "playerTask",
         6144,
         NULL,
-        tskIDLE_PRIORITY + 10,
+        tskIDLE_PRIORITY + 2,
         NULL);
 
     if (taskResult != pdPASS)
@@ -210,7 +209,7 @@ void setup()
         "serverTask",
         4096,
         NULL,
-        tskIDLE_PRIORITY + 15,
+        tskIDLE_PRIORITY,
         NULL);
 
     if (taskResult != pdPASS)
@@ -227,34 +226,20 @@ void loop() {}
 
 void audio_eof_stream(const char *info)
 {
-    playerMessage msg;
-    msg.action = playerMessage::START_ITEM;
-    msg.value = playList.currentItem() + 1;
-    xQueueSend(playerQueue, &msg, portMAX_DELAY);
+    sendPlayerMessage(playerMessage::START_ITEM, playList.currentItem() + 1);
 }
 
 void audio_showstreamtitle(const char *info)
 {
-    log_d("STREAMTITLE: %s", info);
-    {
-        serverMessage msg;
-        msg.type = serverMessage::WS_UPDATE_STREAMTITLE;
-        snprintf(msg.str, sizeof(msg.str), "%s", info);
-        xQueueSend(serverQueue, &msg, portMAX_DELAY);
-    }
-
-    tftMessage msg;
-    msg.action = tftMessage::SHOW_TITLE;
-    snprintf(msg.str, sizeof(msg.str), "%s", info);
-    xQueueSend(tftQueue, &msg, portMAX_DELAY);
+    static char buff[256];
+    if (!strcmp(info, buff))
+        return;
+    snprintf(buff, 256, "%s", info);
+    sendServerMessage(serverMessage::WS_UPDATE_STREAMTITLE, info);
+    sendTftMessage(tftMessage::SHOW_TITLE, info);
 }
 
 void audio_showstation(const char *info)
 {
-    log_d("STATION: %s", info);
-
-    serverMessage msg;
-    msg.type = serverMessage::WS_UPDATE_STATION;
-    snprintf(msg.str, sizeof(msg.str), "%s", info);
-    xQueueSend(serverQueue, &msg, portMAX_DELAY);
+    sendServerMessage(serverMessage::WS_UPDATE_STATION, info);
 }

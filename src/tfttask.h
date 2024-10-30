@@ -8,34 +8,10 @@
 #include <Fonts/FreeSansBold18pt7b.h>
 #include <Fonts/FreeSansBold24pt7b.h>
 
+#include "tftMessage_t.h"
+
 extern const char *PROGRAM_NAME;
 extern SemaphoreHandle_t spiMutex;
 extern QueueHandle_t tftQueue;
-
-float map_range(const float input,
-                const float input_start, const float input_end,
-                const float output_start, const float output_end);
-
-void tftTask(void *parameter);
- 
-struct tftMessage
-{
-    enum action
-    {
-        SYSTEM_MESSAGE,
-        PROGRESS_BAR,
-        CLEAR_SCREEN,
-        SHOW_STATION,
-        SHOW_TITLE,
-        SHOW_CODEC,
-        SHOW_IPADDRESS,
-        SHOW_CLOCK,
-        BUFFER_STATUS
-    };
-    action action;
-    char str[256];
-    size_t value1 = 0;
-    size_t value2 = 0;
-};
 
 #endif
