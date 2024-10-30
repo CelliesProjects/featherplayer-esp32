@@ -105,6 +105,7 @@ static String favoritesToCStruct()
             char ch;
             while (file.available() && (ch = (char)file.read()) != '\n')
                 s += ch;
+
             s += "\"},\n";
         }
         else
@@ -139,7 +140,7 @@ static String favoritesToString()
         }
         else
             log_e("Skipping invalid file: %s (Size: %u bytes)", file.name(), (uint32_t)file.size());
-        
+
         file.close();
         file = folder.openNextFile();
     }
@@ -269,11 +270,7 @@ static void webserverUrlSetup()
 
     server.on(
         "/favorites", [](PsychicRequest *request)
-        {
-            PsychicResponse response = PsychicResponse(request);
-            response.addHeader("Cache-Control", "no-cache,no-store,must-revalidate,max-age=0");
-            response.setContent(favoritesToCStruct().c_str());
-            return response.send(); });
+        { return request->reply(favoritesToCStruct().c_str()); });
 
     constexpr const char *MIMETYPE_SVG{"image/svg+xml"};
 
@@ -328,7 +325,6 @@ static void wsNewClientHandler(PsychicWebSocketClient *client)
 
     snprintf(buff, 32, "status\n%s\n", _paused ? "paused" : "playing");
     client->sendMessage(buff);
-
 
     client->sendMessage(playList.toString().c_str());
     client->sendMessage(favoritesToString().c_str());
