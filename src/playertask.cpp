@@ -30,6 +30,7 @@ static void startItem(ESP32_VS1053_Stream &audio, playerMessage &msg)
 {
     if (audio.isRunning())
     {
+        audio_showstreamtitle(" ");
         xSemaphoreTake(spiMutex, portMAX_DELAY);
         audio.stopSong();
         xSemaphoreGive(spiMutex);
@@ -149,7 +150,7 @@ void playerTask(void *parameter)
             }
         }
 
-        constexpr const auto MAX_UPDATE_FREQ_HZ = 3;
+        constexpr const auto MAX_UPDATE_FREQ_HZ = 5;
         constexpr const auto UPDATE_INTERVAL_MS = 1000 / MAX_UPDATE_FREQ_HZ;
         static unsigned long savedTime = millis();
 
@@ -162,9 +163,14 @@ void playerTask(void *parameter)
 
         if (audio.isRunning())
         {
+            static int lastUsed = 0;
             size_t used, capacity;
             audio.bufferStatus(used, capacity);
-            sendTftMessage(tftMessage::BUFFER_STATUS, NULL, used, capacity);
+            if (lastUsed != used)
+            {
+                sendTftMessage(tftMessage::BUFFER_STATUS, NULL, used, capacity);
+                lastUsed = used;
+            }
 
             xSemaphoreTake(spiMutex, portMAX_DELAY);
             audio.loop();

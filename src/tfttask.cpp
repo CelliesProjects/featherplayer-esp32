@@ -94,16 +94,16 @@ void tftTask(void *parameter)
                 streamTitle[0] = 0;
                 streamTitleOffset = 0;
                 xSemaphoreTake(spiMutex, portMAX_DELAY);
-                tft.fillRect(0, 0, tft.width(), TOP_OF_SCROLLER, BACKGROUND_COLOR);
+                tft.fillRect(0, canvas.height(), tft.width(), TOP_OF_SCROLLER - canvas.height(), BACKGROUND_COLOR);
                 xSemaphoreGive(spiMutex);
                 break;
             case tftMessage::SHOW_STATION:
-                tft.setTextSize(1);
-                tft.setTextColor(TEXT_COLOR);
-                tft.setFont(&FreeSansBold9pt7b);
-                tft.setCursor(5, 20);
+                canvas.setFont(&FreeSansBold9pt7b);
+                canvas.setTextSize(1);
+                canvas.setCursor(4, canvas.height() - 6);
+                canvas.print(msg.str);
                 xSemaphoreTake(spiMutex, portMAX_DELAY);
-                tft.print(msg.str);
+                tft.drawRGBBitmap(0, 0, canvas.getBuffer(), canvas.width(), canvas.height());
                 xSemaphoreGive(spiMutex);
                 break;
             case tftMessage::SHOW_TITLE:
@@ -200,7 +200,7 @@ void tftTask(void *parameter)
             clock.setCursor((clock.width() / 2) - (width / 2) - 5, TOP_OF_SCROLLER - 6);
             clock.print(buff);
 
-            clock.setTextColor(TEXT_COLOR);
+            // make the letters a bit wider
             clock.setCursor((clock.width() / 2) - (width / 2) - 3, TOP_OF_SCROLLER - 6);
             clock.print(buff);
 
