@@ -163,7 +163,7 @@ void playerTask(void *parameter)
 
         if (audio.isRunning())
         {
-            static int lastUsed = 0;
+            static size_t lastUsed = 0;
             size_t used, capacity;
             audio.bufferStatus(used, capacity);
             if (lastUsed != used)
