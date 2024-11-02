@@ -265,10 +265,10 @@ static void webserverUrlSetup()
 
     constexpr const char *MIMETYPE_SVG{"image/svg+xml"};
 
-    auto createIconURL = [&](const char *uri, const char *icon)
+    auto createIconURL = [](const char *uri, const char *icon)
     {
         server.on(
-            uri, [icon](PsychicRequest *request)
+            uri, [&icon](PsychicRequest *request)
             {
                 if (htmlUnmodified(request, modifiedDate))
                     return request->reply(304);
