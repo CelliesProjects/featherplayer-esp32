@@ -197,34 +197,40 @@ static bool saveItemToFavorites(PsychicWebSocketClient *client, const char *file
     }
 }
 
+static void addStaticContentHeaders(PsychicResponse &response, const char *date)
+{
+    response.addHeader("Last-Modified", date);
+    response.addHeader("Cache-Control", "public, max-age=31536000");
+}
+
 static void webserverUrlSetup()
 {
-    time_t bootTime;
-    time(&bootTime);
-    static char modifiedDate[30];
-    strftime(modifiedDate, sizeof(modifiedDate), "%a, %d %b %Y %X GMT", gmtime(&bootTime));
+    constexpr const time_t compileTime = BUILD_EPOCH;
+    const struct tm *timeinfo = gmtime(&compileTime);
+
+    static char lastModified[30];
+    strftime(lastModified, sizeof(lastModified), "%a, %d %b %Y %X GMT", timeinfo);
 
     constexpr const char *MIMETYPE_HTML{"text/html"};
-    constexpr const char *HEADER_LASTMODIFIED{"Last-Modified"};
     constexpr const char *HEADER_CONTENT_ENCODING{"Content-Encoding"};
     constexpr const char *CONTENT_ENCODING_GZIP{"gzip"};
 
     server.on(
         "/", [](PsychicRequest *request)
         {
-            if (htmlUnmodified(request, modifiedDate))   
+            if (htmlUnmodified(request, lastModified))   
                 return request->reply(304);
 
             PsychicResponse response = PsychicResponse(request);
-            response.addHeader(HEADER_LASTMODIFIED, modifiedDate);
             response.addHeader(HEADER_CONTENT_ENCODING, CONTENT_ENCODING_GZIP);
             response.setContent(index_htm_gz, index_htm_gz_len);
+            addStaticContentHeaders(response, lastModified);
             return response.send(); });
 
     server.on(
         "/scripturl", [](PsychicRequest *request)
         {
-            if (htmlUnmodified(request, modifiedDate))
+            if (htmlUnmodified(request, lastModified))
                 return request->reply(304);
 
             String content = SCRIPT_URL;
@@ -237,14 +243,14 @@ static void webserverUrlSetup()
                 content.concat("\n");
             }
             PsychicResponse response = PsychicResponse(request);
-            response.addHeader(HEADER_LASTMODIFIED, modifiedDate);  
             response.setContent(content.c_str());
+            addStaticContentHeaders(response, lastModified);
             return response.send(); });
 
     server.on(
         "/stations", [](PsychicRequest *request)
         {
-            if (htmlUnmodified(request, modifiedDate))
+            if (htmlUnmodified(request, lastModified))
                 return request->reply(304);
 
             String content;
@@ -255,13 +261,9 @@ static void webserverUrlSetup()
                 content.concat("\n");
             }
             PsychicResponse response = PsychicResponse(request);
-            response.addHeader(HEADER_LASTMODIFIED, modifiedDate);
             response.setContent(content.c_str());
+            addStaticContentHeaders(response, lastModified);
             return response.send(); });
-
-    server.on(
-        "/favorites", [](PsychicRequest *request)
-        { return request->reply(favoritesToCStruct().c_str()); });
 
     constexpr const char *MIMETYPE_SVG{"image/svg+xml"};
 
@@ -270,13 +272,13 @@ static void webserverUrlSetup()
         server.on(
             uri, [icon](PsychicRequest *request)
             {
-                if (htmlUnmodified(request, modifiedDate))
+                if (htmlUnmodified(request, lastModified))
                     return request->reply(304);
 
                 PsychicResponse response = PsychicResponse(request);
                 response.setContent(icon);
                 response.setContentType(MIMETYPE_SVG);
-                response.addHeader(HEADER_LASTMODIFIED, modifiedDate);
+                addStaticContentHeaders(response, lastModified);
                 return response.send(); });
     };
 
