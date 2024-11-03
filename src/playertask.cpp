@@ -94,6 +94,8 @@ void playerTask(void *parameter)
 {
     sendTftMessage(tftMessage::SYSTEM_MESSAGE, "Starting codec...");
 
+    delay(2);
+
     static ESP32_VS1053_Stream audio;
 
     xSemaphoreTake(spiMutex, portMAX_DELAY);
@@ -140,11 +142,7 @@ void playerTask(void *parameter)
                 audio.stopSong();
                 xSemaphoreGive(spiMutex);
                 break;
-                /*
-            case playerMessage::SETTONE:
-                // implement it!
-                break;
-                */
+
             default:
                 log_w("unhandled player message with number %i", msg.type);
             }
