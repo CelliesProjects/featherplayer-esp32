@@ -18,7 +18,7 @@ struct tftMessage
         BUFFER_STATUS
     };
     Type type;
-    char str[256];
+    char str[160];
     size_t value1 = 0;
     size_t value2 = 0;
 };
