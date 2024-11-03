@@ -18,7 +18,7 @@ const struct source preset[]{
     {"Amsterdam Funk Channel", "http://stream.afc.fm:8504/stream"},
     {"Radio Gelderland", "http://d2od87akyl46nm.cloudfront.net/icecast/omroepgelderland/radiogelderland"},
     {"Sublime Soul", "http://22673.live.streamtheworld.com/WEB22_MP3_SC?dist=SUBLIME_WEBSITE"},
-    {"Sublime Funk & Disco", "http://22673.live.streamtheworld.com/WEB20_MP3_SC?dist=SUBLIME_WEBSITE"},
+    {"Sublime Jazz", "http://22673.live.streamtheworld.com/WEB20_MP3_SC?dist=SUBLIME_WEBSITE"},
     {"XXL Stenders", "http://streams.robstenders.nl:8063/bonanza_mp3"},
     {"LXClassics", "http://www.lxclassics.com/playlist/LXClassics.m3u"},
     {"192 Radio Nederland", "http://192radio.stream-server.nl/stream"},
