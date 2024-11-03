@@ -265,6 +265,10 @@ static void webserverUrlSetup()
             addStaticContentHeaders(response, lastModified);
             return response.send(); });
 
+    server.on(
+        "/favorites", [](PsychicRequest *request)
+        { return request->reply(favoritesToCStruct().c_str()); });
+
     constexpr const char *MIMETYPE_SVG{"image/svg+xml"};
 
     auto createIconURL = [](const char *uri, const char *icon)
@@ -407,8 +411,8 @@ static esp_err_t wsFrameHandler(PsychicWebSocketRequest *request, httpd_ws_frame
 
         if (itemsAdded > 1)
         {
-            char buff[32];
-            snprintf(buff, 32, "Added %u items to playlist", itemsAdded);
+            char buff[64];
+            snprintf(buff, sizeof(buff), "Added %u items to playlist", itemsAdded);
             sendServerMessage(serverMessage::WS_PASS_MESSAGE, buff, true, request->client()->socket());
         }
         updatePlaylistOverWebSocket();
@@ -694,7 +698,7 @@ void serverTask(void *parameter)
 
             case serverMessage::WS_UPDATE_STATUS:
             {
-                char buff[30];
+                char buff[180];
                 snprintf(buff, sizeof(buff), "status\n%s\n", msg.str);
                 websocketHandler.sendAll(buff);
                 break;

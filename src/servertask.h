@@ -14,8 +14,8 @@ PsychicHttpServer server;
 PsychicWebSocketHandler websocketHandler;
 size_t _savedPosition = 0;
 
-static char showStation[150]{};
-static char streamTitle[150]{};
+static char showStation[190]{};
+static char streamTitle[180]{};
 
 extern void sendPlayerMessage(playerMessage::Type type, uint8_t value = 0, size_t offset = 0);
 extern String percentEncode(const char *plaintext);
