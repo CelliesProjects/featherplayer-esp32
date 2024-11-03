@@ -268,7 +268,7 @@ static void webserverUrlSetup()
     auto createIconURL = [](const char *uri, const char *icon)
     {
         server.on(
-            uri, [&icon](PsychicRequest *request)
+            uri, [icon](PsychicRequest *request)
             {
                 if (htmlUnmodified(request, modifiedDate))
                     return request->reply(304);
@@ -277,7 +277,6 @@ static void webserverUrlSetup()
                 response.setContent(icon);
                 response.setContentType(MIMETYPE_SVG);
                 response.addHeader(HEADER_LASTMODIFIED, modifiedDate);
-                response.addHeader("Cache-Control", "public, max-age=31536000");
                 return response.send(); });
     };
 
@@ -352,7 +351,6 @@ static esp_err_t wsFrameHandler(PsychicWebSocketRequest *request, httpd_ws_frame
 
     else if (!_paused && !strcmp("pause", pch))
     {
-        _paused = true;
         sendPlayerMessage(playerMessage::PAUSE);
         sendServerMessage(serverMessage::WS_UPDATE_STATUS, "paused");
         return ESP_OK;
