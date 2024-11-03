@@ -30,7 +30,7 @@ static void startItem(ESP32_VS1053_Stream &audio, playerMessage &msg)
 {
     if (audio.isRunning())
     {
-        audio_showstreamtitle(" ");
+        audio_showstreamtitle("");
         xSemaphoreTake(spiMutex, portMAX_DELAY);
         audio.stopSong();
         xSemaphoreGive(spiMutex);
@@ -54,7 +54,7 @@ static void startItem(ESP32_VS1053_Stream &audio, playerMessage &msg)
     {
         if (!msg.offset)
         {
-            sendTftMessage(tftMessage::SHOW_TITLE, "\0");
+            sendTftMessage(tftMessage::SHOW_TITLE, "");
             sendTftMessage(tftMessage::CLEAR_SCREEN);
             sendTftMessage(tftMessage::SHOW_STATION, playList.name(playList.currentItem()).c_str());
             sendServerMessage(serverMessage::WS_UPDATE_NOWPLAYING);
