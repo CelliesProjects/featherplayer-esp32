@@ -9,10 +9,8 @@ struct playerMessage
         START_ITEM,
         STOPSONG,
         PAUSE,
-        RESUME,
     };
     Type type;
-    bool singleClient = false;
     size_t value = 0;
     size_t offset = 0;
 };
