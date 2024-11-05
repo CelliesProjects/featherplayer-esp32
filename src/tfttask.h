@@ -12,6 +12,6 @@
 
 extern const char *PROGRAM_NAME;
 extern SemaphoreHandle_t spiMutex;
-extern QueueHandle_t tftQueue;
+QueueHandle_t tftQueue = NULL;
 
 #endif

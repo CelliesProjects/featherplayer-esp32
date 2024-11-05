@@ -14,27 +14,24 @@
 #include "serverMessage_t.h"
 
 const char *PROGRAM_NAME = "featherplayer-esp32";
-const char *FAVORITES_FOLDER = "/"; /* if this is a folder use a closing slash */
-playList_t playList;
-uint8_t _playerVolume = VS1053_INITIALVOLUME;
-bool _paused = false;
 
-SemaphoreHandle_t spiMutex = nullptr; // SPI bus is shared between playertask -VS1053- and tfttask -ST7789-
+SemaphoreHandle_t spiMutex = NULL; // SPI bus is shared between playertask -VS1053- and tfttask -ST7789-
 
-QueueHandle_t tftQueue = nullptr;
-QueueHandle_t playerQueue = nullptr;
-QueueHandle_t serverQueue = nullptr;
+extern playList_t playList;
 
+extern QueueHandle_t serverQueue;
 extern void serverTask(void *parameter);
 extern void sendServerMessage(serverMessage::Type type, const char *str = NULL, bool singleClient = false, size_t value = 0, size_t value2 = 0);
 
+extern QueueHandle_t playerQueue;
 extern void playerTask(void *parameter);
 extern void sendPlayerMessage(playerMessage::Type type, uint8_t value = 0, size_t offset = 0);
 
+extern QueueHandle_t tftQueue;
 extern void tftTask(void *parameter);
 extern void sendTftMessage(tftMessage::Type type, const char *str = NULL, size_t value1 = 0, size_t value2 = 0);
 
-void mountSDcard()
+static void mountSDcard()
 {
     const int SDREADER_CS = 5;
 

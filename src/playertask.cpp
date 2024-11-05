@@ -17,11 +17,11 @@ void playListEnd()
     sendTftMessage(tftMessage::SHOW_CLOCK);
 
     char buff[150];
-    snprintf(buff, 150, "%s %s", PROGRAM_NAME, GIT_VERSION);
+    snprintf(buff, sizeof(buff), "%s %s", PROGRAM_NAME, GIT_VERSION);
     sendTftMessage(tftMessage::SHOW_TITLE, buff);
     sendServerMessage(serverMessage::WS_UPDATE_STATION, buff);
 
-    snprintf(buff, 150, "%s", "Search API provided by: <a href=\"https://www.radio-browser.info/\" target=\"_blank\"><span style=\"white-space:nowrap;\">radio-browser.info</span></a>");
+    snprintf(buff, sizeof(buff), "%s", "Search API provided by: <a href=\"https://www.radio-browser.info/\" target=\"_blank\"><span style=\"white-space:nowrap;\">radio-browser.info</span></a>");
     sendServerMessage(serverMessage::WS_UPDATE_STREAMTITLE, buff);
     sendServerMessage(serverMessage::WS_UPDATE_NOWPLAYING);
 }
@@ -81,9 +81,9 @@ static void startItem(ESP32_VS1053_Stream &audio, playerMessage &msg)
     {
         char buff[32];
         if (audio.bitrate())
-            snprintf(buff, 32, "%s %u kbps", audio.currentCodec(), audio.bitrate());
+            snprintf(buff, sizeof(buff), "%s %u kbps", audio.currentCodec(), audio.bitrate());
         else
-            snprintf(buff, 32, "%s", audio.currentCodec());
+            snprintf(buff, sizeof(buff), "%s", audio.currentCodec());
         sendTftMessage(tftMessage::SHOW_CODEC, buff);
     }
     else
