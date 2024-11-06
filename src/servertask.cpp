@@ -412,7 +412,7 @@ static esp_err_t wsFrameHandler(PsychicWebSocketRequest *request, httpd_ws_frame
         if (itemsAdded > 1)
         {
             char buff[64];
-            snprintf(buff, sizeof(buff), "Added %u items to playlist", itemsAdded);
+            snprintf(buff, sizeof(buff), "Added %lu items to playlist", itemsAdded);
             sendServerMessage(serverMessage::WS_PASS_MESSAGE, buff, true, request->client()->socket());
         }
         updatePlaylistOverWebSocket();

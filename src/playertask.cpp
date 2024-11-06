@@ -81,7 +81,7 @@ static void startItem(ESP32_VS1053_Stream &audio, playerMessage &msg)
     {
         char buff[32];
         if (audio.bitrate())
-            snprintf(buff, sizeof(buff), "%s %u kbps", audio.currentCodec(), audio.bitrate());
+            snprintf(buff, sizeof(buff), "%s %lu kbps", audio.currentCodec(), audio.bitrate());
         else
             snprintf(buff, sizeof(buff), "%s", audio.currentCodec());
         sendTftMessage(tftMessage::SHOW_CODEC, buff);

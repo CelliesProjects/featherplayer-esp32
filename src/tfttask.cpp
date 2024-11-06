@@ -40,13 +40,10 @@ void tftTask(void *parameter)
     tft.setTextWrap(false);
     xSemaphoreGive(spiMutex);
 
-    // setup tft backlight pwm
-    const auto LEDC_CHANNEL = 0;
-    const auto LEDC_MAX_PWM_VALUE = (1 << SOC_LEDC_TIMER_BIT_WIDE_NUM) - 1;
+    const auto LEDC_MAX_PWM_VALUE = (1 << SOC_LEDC_TIMER_BIT_WIDTH) - 1;
 
-    ledcSetup(LEDC_CHANNEL, 1220, SOC_LEDC_TIMER_BIT_WIDE_NUM);
-    ledcAttachPin(TFT_BACKLITE, LEDC_CHANNEL);
-    ledcWrite(LEDC_CHANNEL, LEDC_MAX_PWM_VALUE / 10);
+    ledcAttachChannel(TFT_BACKLITE, 1220, SOC_LEDC_TIMER_BIT_WIDTH,0);
+    ledcWrite(TFT_BACKLITE, LEDC_MAX_PWM_VALUE / 10);
 
     static GFXcanvas16 canvas(tft.width(), 20);
     static int16_t strX, strY;
