@@ -42,7 +42,7 @@ void tftTask(void *parameter)
 
     const auto LEDC_MAX_PWM_VALUE = (1 << SOC_LEDC_TIMER_BIT_WIDTH) - 1;
 
-    ledcAttachChannel(TFT_BACKLITE, 1220, SOC_LEDC_TIMER_BIT_WIDTH,0);
+    ledcAttachChannel(TFT_BACKLITE, 1220, SOC_LEDC_TIMER_BIT_WIDTH, 0);
     ledcWrite(TFT_BACKLITE, LEDC_MAX_PWM_VALUE / 10);
 
     static GFXcanvas16 canvas(tft.width(), 20);
@@ -104,6 +104,9 @@ void tftTask(void *parameter)
                 xSemaphoreGive(spiMutex);
                 break;
             case tftMessage::SHOW_TITLE:
+                if (!strcmp(streamTitle, msg.str))
+                    break;
+
                 if (msg.str[0] == 0)
                 {
                     clearTitle = true;
