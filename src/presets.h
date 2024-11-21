@@ -27,7 +27,7 @@ const struct source preset[]{
     {"538 Dance Department", "http://playerservices.streamtheworld.com/api/livestream-redirect/TLPSTR01.mp3"},
     {"Jazz Radio Funk", "http://jazz-wr06.ice.infomaniak.ch/jazz-wr06-128.mp3"},
     {"RadioEins", "http://radioeins.de/stream"},
-    {"Tekno1", "https://tekno1.radioca.st/"},
+    {"Tekno1", "https://tekno1.radioca.st/listen.pls?sid=1"},
     {"BollyHits Radio", "http://hoth.alonhosting.com:1080/stream/1/"},
 };
 
