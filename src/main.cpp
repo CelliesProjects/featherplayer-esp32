@@ -166,13 +166,12 @@ void setup()
 
     log_i("FeatherPlayer esp32 connecting to %s", SSID);
 
-    WiFi.useStaticBuffers(true);
     WiFi.begin(SSID, PSK);
     WiFi.setSleep(false);
     while (!WiFi.isConnected())
         delay(10);
 
-    log_i("WiFi connected - IP %s", WiFi.localIP().toString().c_str());
+    log_i("WiFi connected - IP %s", WiFi.localIP().toString());
 
     configTzTime(TIMEZONE, NTP_POOL);
 
