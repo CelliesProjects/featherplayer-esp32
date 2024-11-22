@@ -95,6 +95,7 @@ void tftTask(void *parameter)
                 xSemaphoreGive(spiMutex);
                 break;
             case tftMessage::SHOW_STATION:
+                canvas.fillScreen(0);
                 canvas.setFont(&FreeSansBold9pt7b);
                 canvas.setTextSize(1);
                 canvas.setCursor(4, canvas.height() - 6);
