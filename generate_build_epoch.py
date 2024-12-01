@@ -12,7 +12,7 @@ human_readable_time = datetime.fromtimestamp(build_epoch, tz=timezone.utc).strft
 with open(header_file, "w") as f:
     f.write(f"#ifndef BUILD_EPOCH_H\n")
     f.write(f"#define BUILD_EPOCH_H\n\n")
-    f.write(f"#define BUILD_EPOCH {build_epoch} // {human_readable_time}\n\n")
+    f.write(f"#define BUILD_EPOCH {build_epoch} // {human_readable_time} UTC\n\n")
     f.write(f"#endif // BUILD_EPOCH_H\n")
 
 print(f"Generated {header_file} with BUILD_EPOCH={build_epoch} ({human_readable_time})")
