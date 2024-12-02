@@ -164,7 +164,7 @@ void playerTask(void *parameter)
             static size_t lastUsed = 0;
             size_t used, capacity;
             audio.bufferStatus(used, capacity);
-            if (lastUsed != used)
+            if (capacity && lastUsed != used)
             {
                 sendTftMessage(tftMessage::BUFFER_STATUS, NULL, used, capacity);
                 lastUsed = used;
