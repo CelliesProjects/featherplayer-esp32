@@ -22,7 +22,7 @@ human_readable_time = local_time.strftime(f"%A %d %B %Y %H:%M UTC{sign}{offset_h
 with open(header_file, "w") as f:
     f.write("#ifndef BUILD_EPOCH_H\n")
     f.write("#define BUILD_EPOCH_H\n\n")
-    f.write(f"#define BUILD_EPOCH {build_epoch} // {human_readable_time}\n\n")
+    f.write(f"constexpr const time_t BUILD_EPOCH = {build_epoch}; // {human_readable_time}\n\n")
     f.write("#endif // BUILD_EPOCH_H\n")
 
 print(f"Generated {header_file} with BUILD_EPOCH={build_epoch} ({human_readable_time})")

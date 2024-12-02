@@ -206,8 +206,7 @@ static void addStaticContentHeaders(PsychicResponse &response, const char *date)
 
 static void webserverUrlSetup()
 {
-    constexpr const time_t compileTime = BUILD_EPOCH;
-    const struct tm *timeinfo = gmtime(&compileTime);
+    const struct tm *timeinfo = gmtime(&BUILD_EPOCH);
 
     static char lastModified[30];
     strftime(lastModified, sizeof(lastModified), "%a, %d %b %Y %X GMT", timeinfo);
