@@ -22,8 +22,8 @@ const struct source preset[]{
     {"XXL Stenders", "http://streams.robstenders.nl:8063/bonanza_mp3"},
     {"LXClassics", "http://www.lxclassics.com/playlist/LXClassics.m3u"},
     {"192 Radio Nederland", "http://192radio.stream-server.nl/stream"},
-    {"DELTA RADIO NIJMEGEN", "http://streamdelta.lokaalradio.nl:9005/download.mp3"},    
-    {"80s Hitradio Amsterdam","http://s22.myradiostream.com:7728/"},
+    {"DELTA RADIO NIJMEGEN", "http://streamdelta.lokaalradio.nl:9005/download.mp3"},
+    {"80s Hitradio Amsterdam", "http://s22.myradiostream.com:7728/"},
     {"538 Dance Department", "http://playerservices.streamtheworld.com/api/livestream-redirect/TLPSTR01.mp3"},
     {"Jazz Radio Funk", "http://jazz-wr06.ice.infomaniak.ch/jazz-wr06-128.mp3"},
     {"RadioEins", "http://radioeins.de/stream"},
@@ -31,6 +31,6 @@ const struct source preset[]{
     {"BollyHits Radio", "http://hoth.alonhosting.com:1080/stream/1/"},
 };
 
-const uint8_t NUMBER_OF_PRESETS = sizeof(preset) / sizeof(source);      
+constexpr const uint8_t NUMBER_OF_PRESETS = sizeof(preset) / sizeof(source);
 
 #endif
