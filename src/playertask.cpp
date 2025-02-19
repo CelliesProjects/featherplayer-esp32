@@ -1,5 +1,5 @@
-#include "playertask.h"
-#include "ScopedMutex.h"
+#include "playertask.hpp"
+
 void sendPlayerMessage(playerMessage::Type type, uint8_t value = 0, size_t offset = 0)
 {
     playerMessage msg;

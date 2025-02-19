@@ -1,5 +1,4 @@
-#include "servertask.h"
-#include "build_epoch.h"
+#include "servertask.hpp"
 
 static const char *HEADER_MODIFIED_SINCE = "If-Modified-Since";
 

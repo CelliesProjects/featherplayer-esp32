@@ -1,5 +1,5 @@
-#ifndef __TFT_TASK__
-#define __TFT_TASK__
+#ifndef _TFTTASK_HPP_
+#define _TFTTASK_HPP_
 
 #include <WiFi.h>
 #include <Adafruit_GFX.h>

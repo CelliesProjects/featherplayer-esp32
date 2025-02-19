@@ -1,10 +1,11 @@
-#ifndef __SERVER_TASK__
-#define __SERVER_TASK__
+#ifndef _SERVERTASK_HPP_
+#define _SERVERTASK_HPP_
 
 #include <FFat.h>
 #include <PsychicHttp.h>
 #include <ESP32_VS1053_Stream.h>
 
+#include "build_epoch.h"
 #include "serverMessage_t.h"
 #include "playerMessage_t.h"
 #include "playList.h"

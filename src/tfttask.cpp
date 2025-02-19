@@ -1,4 +1,4 @@
-#include "tfttask.h"
+#include "tfttask.hpp"
 
 void sendTftMessage(tftMessage::Type type, const char *str = NULL, size_t value1 = 0, size_t value2 = 0)
 {
