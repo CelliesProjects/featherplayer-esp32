@@ -8,6 +8,7 @@
 #include <Fonts/FreeSansBold18pt7b.h>
 #include <Fonts/FreeSansBold24pt7b.h>
 
+#include "ScopedMutex.h"
 #include "tftMessage_t.h"
 
 extern const char *PROGRAM_NAME;

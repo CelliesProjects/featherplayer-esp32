@@ -4,6 +4,7 @@
 #include <FS.h>
 #include <SD.h>
 
+#include "ScopedMutex.h"
 #include "playList.h"
 #include "icons.h"
 #include "percentEncode.h"
@@ -89,10 +90,12 @@ void setup()
         while (1)
             delay(100);
     }
-
-    xSemaphoreTake(spiMutex, portMAX_DELAY);
-    mountSDcard();
     xSemaphoreGive(spiMutex);
+
+    {
+        ScopedMutex lock(spiMutex);
+        mountSDcard();
+    }
 
     tftQueue = xQueueCreate(5, sizeof(struct tftMessage));
     if (!tftQueue)
@@ -234,4 +237,3 @@ void audio_showstation(const char *info)
 {
     sendServerMessage(serverMessage::WS_UPDATE_STATION, info);
 }
-

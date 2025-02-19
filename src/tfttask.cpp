@@ -30,15 +30,16 @@ void tftTask(void *parameter)
     static const auto BACKGROUND_COLOR = 0xa0e0; // 8 bit value = #a61d04
     static const auto TEXT_COLOR = 0xf79b;       // 8 bit value = #f5f4e2 yellowish
 
-    // initialize the TFT
-    xSemaphoreTake(spiMutex, portMAX_DELAY);
     static Adafruit_ST7789 tft = Adafruit_ST7789(TFT_CS, TFT_DC, TFT_RST);
-    tft.init(135, 240, SPI_MODE0);
-    tft.setRotation(1);
-    tft.fillScreen(BACKGROUND_COLOR);
-    tft.setTextColor(TEXT_COLOR, BACKGROUND_COLOR);
-    tft.setTextWrap(false);
-    xSemaphoreGive(spiMutex);
+
+    {
+        ScopedMutex lock(spiMutex);
+        tft.init(135, 240, SPI_MODE0);
+        tft.setRotation(1);
+        tft.fillScreen(BACKGROUND_COLOR);
+        tft.setTextColor(TEXT_COLOR, BACKGROUND_COLOR);
+        tft.setTextWrap(false);
+    }
 
     const auto LEDC_MAX_PWM_VALUE = (1 << SOC_LEDC_TIMER_BIT_WIDTH) - 1;
 
@@ -70,9 +71,10 @@ void tftTask(void *parameter)
                 canvas.setTextSize(1);
                 canvas.setCursor(4, canvas.height() - 6);
                 canvas.print(msg.str);
-                xSemaphoreTake(spiMutex, portMAX_DELAY);
-                tft.drawRGBBitmap(0, 0, canvas.getBuffer(), canvas.width(), canvas.height());
-                xSemaphoreGive(spiMutex);
+                {
+                    ScopedMutex lock(spiMutex);
+                    tft.drawRGBBitmap(0, 0, canvas.getBuffer(), canvas.width(), canvas.height());
+                }
                 break;
 
             case tftMessage::PROGRESS_BAR:
@@ -80,19 +82,22 @@ void tftTask(void *parameter)
                 const int HEIGHT_IN_PIXELS = 15;
                 const int HEIGHT_OFFSET = 28;
                 const int16_t FILLED_AREA = map_range(msg.value1, 0, msg.value2, 0, tft.width() + 1);
-                xSemaphoreTake(spiMutex, portMAX_DELAY);
-                tft.fillRect(0, HEIGHT_OFFSET, FILLED_AREA, HEIGHT_IN_PIXELS, ST77XX_BLUE);
-                tft.fillRect(FILLED_AREA, HEIGHT_OFFSET, tft.width() - FILLED_AREA, HEIGHT_IN_PIXELS, ST77XX_WHITE);
-                xSemaphoreGive(spiMutex);
+                {
+                    ScopedMutex lock(spiMutex);
+                    tft.fillRect(0, HEIGHT_OFFSET, FILLED_AREA, HEIGHT_IN_PIXELS, ST77XX_BLUE);
+                    tft.fillRect(FILLED_AREA, HEIGHT_OFFSET, tft.width() - FILLED_AREA, HEIGHT_IN_PIXELS, ST77XX_WHITE);
+                }
                 break;
             }
             case tftMessage::CLEAR_SCREEN:
                 showClock = false;
                 streamTitle[0] = 0;
                 streamTitleOffset = 0;
-                xSemaphoreTake(spiMutex, portMAX_DELAY);
-                tft.fillRect(0, canvas.height(), tft.width(), TOP_OF_SCROLLER - canvas.height(), BACKGROUND_COLOR);
-                xSemaphoreGive(spiMutex);
+                {
+                    ScopedMutex lock(spiMutex);
+                    tft.fillRect(0, canvas.height(), tft.width(), TOP_OF_SCROLLER - canvas.height(), BACKGROUND_COLOR);
+                }
+
                 break;
             case tftMessage::SHOW_STATION:
                 canvas.fillScreen(0);
@@ -100,9 +105,11 @@ void tftTask(void *parameter)
                 canvas.setTextSize(1);
                 canvas.setCursor(4, canvas.height() - 6);
                 canvas.print(msg.str);
-                xSemaphoreTake(spiMutex, portMAX_DELAY);
-                tft.drawRGBBitmap(0, 0, canvas.getBuffer(), canvas.width(), canvas.height());
-                xSemaphoreGive(spiMutex);
+                {
+                    ScopedMutex lock(spiMutex);
+                    tft.drawRGBBitmap(0, 0, canvas.getBuffer(), canvas.width(), canvas.height());
+                }
+
                 break;
             case tftMessage::SHOW_TITLE:
                 if (!strcmp(streamTitle, msg.str))
@@ -125,17 +132,18 @@ void tftTask(void *parameter)
                 tft.setTextColor(TEXT_COLOR);
                 tft.setFont(&FreeSansBold9pt7b);
                 tft.setCursor(5, 66);
-                xSemaphoreTake(spiMutex, portMAX_DELAY);
-                tft.print(msg.str);
-                xSemaphoreGive(spiMutex);
-
+                {
+                    ScopedMutex lock(spiMutex);
+                    tft.print(msg.str);
+                }
                 tft.setFont();
                 tft.setTextSize(1);
                 tft.setCursor(152, 53);
-                xSemaphoreTake(spiMutex, portMAX_DELAY);
-                tft.print("buffer status");
-                tft.drawRect(148, 50, 85, 24, TEXT_COLOR);
-                xSemaphoreGive(spiMutex);
+                {
+                    ScopedMutex lock(spiMutex);
+                    tft.print("buffer status");
+                    tft.drawRect(148, 50, 85, 24, TEXT_COLOR);
+                }
                 break;
             case tftMessage::SHOW_IPADDRESS:
             {
@@ -148,9 +156,10 @@ void tftTask(void *parameter)
                 uint16_t width;
                 tft.getTextBounds(WiFi.localIP().toString().c_str(), 0, 0, &xpos, &ypos, &width, &height);
                 tft.setCursor((tft.width() / 2) - (width / 2), tft.height() - (height / 2) + 4);
-                xSemaphoreTake(spiMutex, portMAX_DELAY);
-                tft.print(WiFi.localIP().toString().c_str());
-                xSemaphoreGive(spiMutex);
+                {
+                    ScopedMutex lock(spiMutex);
+                    tft.print(WiFi.localIP().toString().c_str());
+                }
                 break;
             }
 
@@ -165,10 +174,11 @@ void tftTask(void *parameter)
                 const int BAR_WIDTH = 80;
                 const int BAR_HEIGHT = 7;
                 const int16_t FILLED_AREA = map_range(msg.value1, 0, msg.value2, 0, BAR_WIDTH);
-                xSemaphoreTake(spiMutex, portMAX_DELAY);
-                tft.fillRect(X_OFFSET, HEIGHT_OFFSET, FILLED_AREA, BAR_HEIGHT, ST77XX_GREEN);
-                tft.fillRect(X_OFFSET + FILLED_AREA, HEIGHT_OFFSET, BAR_WIDTH - FILLED_AREA, BAR_HEIGHT, ST77XX_RED);
-                xSemaphoreGive(spiMutex);
+                {
+                    ScopedMutex lock(spiMutex);
+                    tft.fillRect(X_OFFSET, HEIGHT_OFFSET, FILLED_AREA, BAR_HEIGHT, ST77XX_GREEN);
+                    tft.fillRect(X_OFFSET + FILLED_AREA, HEIGHT_OFFSET, BAR_WIDTH - FILLED_AREA, BAR_HEIGHT, ST77XX_RED);
+                }
                 break;
             }
 
@@ -204,10 +214,10 @@ void tftTask(void *parameter)
             // make the letters a bit wider
             clock.setCursor((clock.width() / 2) - (width / 2) - 3, TOP_OF_SCROLLER - 6);
             clock.print(buff);
-
-            xSemaphoreTake(spiMutex, portMAX_DELAY);
-            tft.drawRGBBitmap(0, 0, clock.getBuffer(), clock.width(), clock.height());
-            xSemaphoreGive(spiMutex);
+            {
+                ScopedMutex lock(spiMutex);
+                tft.drawRGBBitmap(0, 0, clock.getBuffer(), clock.width(), clock.height());
+            }
             lastClockUpdate = time(NULL);
         }
 
@@ -219,11 +229,10 @@ void tftTask(void *parameter)
             canvas.setTextSize(1);
             canvas.setTextWrap(false);
             canvas.print(streamTitle);
-
-            xSemaphoreTake(spiMutex, portMAX_DELAY);
-            tft.drawRGBBitmap(0, TOP_OF_SCROLLER, canvas.getBuffer(), canvas.width(), canvas.height());
-            xSemaphoreGive(spiMutex);
-
+            {
+                ScopedMutex lock(spiMutex);
+                tft.drawRGBBitmap(0, TOP_OF_SCROLLER, canvas.getBuffer(), canvas.width(), canvas.height());
+            }            
             streamTitleOffset = (streamTitleOffset < (canvas.width() + strWidth)) ? streamTitleOffset + 2 : 0;
             clearTitle = false;
         }

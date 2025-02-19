@@ -4,6 +4,7 @@
 #include <VS1053.h> /* https://github.com/baldram/ESP_VS1053_Library */
 #include <ESP32_VS1053_Stream.h>
 
+#include "ScopedMutex.h"
 #include "playerMessage_t.h"
 #include "serverMessage_t.h"
 #include "tftMessage_t.h"

@@ -1,5 +1,5 @@
 #include "playertask.h"
-
+#include "ScopedMutex.h"
 void sendPlayerMessage(playerMessage::Type type, uint8_t value = 0, size_t offset = 0)
 {
     playerMessage msg;
@@ -31,9 +31,8 @@ static void startItem(ESP32_VS1053_Stream &audio, playerMessage &msg)
     if (audio.isRunning())
     {
         audio_showstreamtitle("");
-        xSemaphoreTake(spiMutex, portMAX_DELAY);
+        ScopedMutex lock(spiMutex);
         audio.stopSong();
-        xSemaphoreGive(spiMutex);
     }
 
     if (msg.value >= playList.size())
@@ -62,9 +61,11 @@ static void startItem(ESP32_VS1053_Stream &audio, playerMessage &msg)
             sendServerMessage(serverMessage::WS_UPDATE_STATION, playList.name(playList.currentItem()).c_str());
         }
 
-        xSemaphoreTake(spiMutex, portMAX_DELAY);
-        const auto success = audio.connecttohost(playList.url(playList.currentItem()).c_str(), LIBRARY_USER, LIBRARY_PWD, msg.offset);
-        xSemaphoreGive(spiMutex);
+        bool success = false;
+        {
+            ScopedMutex lock(spiMutex);
+            success = audio.connecttohost(playList.url(playList.currentItem()).c_str(), LIBRARY_USER, LIBRARY_PWD, msg.offset);
+        }
 
         if (success)
             break;
@@ -98,15 +99,16 @@ void playerTask(void *parameter)
 
     static ESP32_VS1053_Stream audio;
 
-    xSemaphoreTake(spiMutex, portMAX_DELAY);
-    if (!audio.startDecoder(VS1053_CS, VS1053_DCS, VS1053_DREQ) || !audio.isChipConnected())
     {
-        log_e("VS1053 board could not init. System HALTED!");
-        sendTftMessage(tftMessage::SYSTEM_MESSAGE, "VS1053 ERROR. System HALTED.");
-        while (1)
-            delay(100);
+        ScopedMutex lock(spiMutex);
+        if (!audio.startDecoder(VS1053_CS, VS1053_DCS, VS1053_DREQ) || !audio.isChipConnected())
+        {
+            log_e("VS1053 board could not init. System HALTED!");
+            sendTftMessage(tftMessage::SYSTEM_MESSAGE, "VS1053 ERROR. System HALTED.");
+            while (1)
+                delay(100);
+        }
     }
-    xSemaphoreGive(spiMutex);
 
     playListEnd(); // this puts the audio system in a known state
 
@@ -124,9 +126,10 @@ void playerTask(void *parameter)
                 _playerVolume = msg.value > VS1053_MAXVOLUME ? VS1053_MAXVOLUME : msg.value;
                 sendServerMessage(serverMessage::WS_UPDATE_VOLUME, NULL, false, _playerVolume);
 
-                xSemaphoreTake(spiMutex, portMAX_DELAY);
-                audio.setVolume(_playerVolume);
-                xSemaphoreGive(spiMutex);
+                {
+                    ScopedMutex lock(spiMutex);
+                    audio.setVolume(_playerVolume);
+                }
                 break;
 
             case playerMessage::START_ITEM:
@@ -138,10 +141,11 @@ void playerTask(void *parameter)
                 _paused = true;
                 [[fallthrough]];
             case playerMessage::STOPSONG:
-                xSemaphoreTake(spiMutex, portMAX_DELAY);
+            {
+                ScopedMutex lock(spiMutex);
                 audio.stopSong();
-                xSemaphoreGive(spiMutex);
-                break;
+            }
+            break;
 
             default:
                 log_w("unhandled player message with number %i", msg.type);
@@ -170,9 +174,8 @@ void playerTask(void *parameter)
                 lastUsed = used;
             }
 
-            xSemaphoreTake(spiMutex, portMAX_DELAY);
+            ScopedMutex lock(spiMutex);
             audio.loop();
-            xSemaphoreGive(spiMutex);
         }
     }
 }
