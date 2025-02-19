@@ -20,11 +20,27 @@
  *
  * Example Usage:
  * ```cpp
+ * // No timeout (blocks indefinitely):
  * {
- *     ScopedMutex lock(myMutex);
+ *     ScopedMutex lock(myMutex); // Mutex guaranteed to be acquired (blocks)
+ * 
+ *     // Access shared resource here...
+ * 
+ * } // Mutex automatically released
  *
- *     // Access shared resource here
- *
+ * // With timeout:
+ * {
+ *     ScopedMutex lock(myMutex, pdMS_TO_TICKS(10));
+ * 
+ *     if (lock.acquired()) { // Check if acquired!
+ * 
+ *         // Access shared resource here...
+ * 
+ *     } else {
+ * 
+ *         // Handle timeout (e.g., log error, retry later)
+ * 
+ *     }
  * } // Mutex automatically released
  *
  * ```
