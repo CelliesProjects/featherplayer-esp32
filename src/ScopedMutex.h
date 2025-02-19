@@ -5,7 +5,7 @@
 #include <freertos/semphr.h>
 
 /**
- * @brief Constructs a ScopedMutex object and attempts to acquire the mutex.
+ * @brief Constructs a ScopedMutex object from `SemaphoreHandle_t` `m` and attempts to acquire the mutex.
  *
  * Guarantees mutex release when the `ScopedMutex` object goes out of scope.
  *
@@ -18,7 +18,7 @@
  *
  *       -  If a timeout is provided, the `acquired()` method should be used to check if the mutex was successfully acquired.
  *
- * Example Usage:
+ * Example use:
  * ```cpp
  * // No timeout (blocks indefinitely):
  * {
@@ -27,7 +27,7 @@
  *     // Access shared resource here...
  * 
  * } // Mutex automatically released
- *
+ * 
  * // With timeout:
  * {
  *     ScopedMutex lock(myMutex, pdMS_TO_TICKS(10));
