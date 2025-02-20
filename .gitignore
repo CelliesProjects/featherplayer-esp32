@@ -5,3 +5,5 @@
 .vscode/ipch
 include/WiFiCredentials.h
 gzip-html-files.py
+src/webui/*.html.gz
+
