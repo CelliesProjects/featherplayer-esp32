@@ -4,4 +4,4 @@
 .vscode/launch.json
 .vscode/ipch
 include/WiFiCredentials.h
-include/build_epoch.h
+gzip-html-files.py
