@@ -321,7 +321,7 @@ static void webserverUrlSetup()
                 return request->reply(500, TEXT_PLAIN, "Failed to get task stats");
             }
 
-            String csvResponse = "Name,State,Priority,Stack,Runtime,CPU%\n";
+            String csvResponse = "Name,State,Priority,Min Stack Left,Runtime,CPU%\n";
 
             for (UBaseType_t i = 0; i < retrievedTasks; i++) 
             {
