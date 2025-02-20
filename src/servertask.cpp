@@ -307,58 +307,58 @@ static void webserverUrlSetup()
     server.on(
         "/api/taskstats", HTTP_GET, [](PsychicRequest *request)
         {
-                uint32_t totalRunTime;
-                UBaseType_t taskCount = uxTaskGetNumberOfTasks();
-    
-                TaskStatus_t *pxTaskStatusArray = (TaskStatus_t *)heap_caps_malloc(taskCount * sizeof(TaskStatus_t), MALLOC_CAP_INTERNAL);
-                if (!pxTaskStatusArray) 
-                    return request->reply(500, TEXT_PLAIN, "Memory allocation failed");
-    
-                UBaseType_t retrievedTasks = uxTaskGetSystemState(pxTaskStatusArray, taskCount, &totalRunTime);
-                if (totalRunTime == 0 || retrievedTasks == 0) 
-                {
-                    heap_caps_free(pxTaskStatusArray);
-                    return request->reply(500, TEXT_PLAIN, "Failed to get task stats");
-                }
-    
-                String csvResponse = "Name,State,Priority,Stack,Runtime,CPU%\n";
-    
-                for (UBaseType_t i = 0; i < retrievedTasks; i++) 
-                {
-                    const char *taskName = pxTaskStatusArray[i].pcTaskName;
-    
-                    float cpuPercent = ((float)pxTaskStatusArray[i].ulRunTimeCounter / (float)totalRunTime) * 100.0f;
-    
-                    csvResponse += String(taskName) + "," +
-                                String(pxTaskStatusArray[i].eCurrentState) + "," +
-                                String(pxTaskStatusArray[i].uxCurrentPriority) + "," +
-                                String(pxTaskStatusArray[i].usStackHighWaterMark) + "," +
-                                String(pxTaskStatusArray[i].ulRunTimeCounter) + "," +
-                                String(cpuPercent, 2) + "\n";
-                }
-    
+            uint32_t totalRunTime;
+            UBaseType_t taskCount = uxTaskGetNumberOfTasks();
+
+            TaskStatus_t *pxTaskStatusArray = (TaskStatus_t *)heap_caps_malloc(taskCount * sizeof(TaskStatus_t), MALLOC_CAP_INTERNAL);
+            if (!pxTaskStatusArray) 
+                return request->reply(500, TEXT_PLAIN, "Memory allocation failed");
+
+            UBaseType_t retrievedTasks = uxTaskGetSystemState(pxTaskStatusArray, taskCount, &totalRunTime);
+            if (totalRunTime == 0 || retrievedTasks == 0) 
+            {
                 heap_caps_free(pxTaskStatusArray);
-    
-                return request->reply(200, MIMETYPE_PLAIN, csvResponse.c_str()); }
+                return request->reply(500, TEXT_PLAIN, "Failed to get task stats");
+            }
+
+            String csvResponse = "Name,State,Priority,Stack,Runtime,CPU%\n";
+
+            for (UBaseType_t i = 0; i < retrievedTasks; i++) 
+            {
+                const char *taskName = pxTaskStatusArray[i].pcTaskName;
+
+                float cpuPercent = ((float)pxTaskStatusArray[i].ulRunTimeCounter / (float)totalRunTime) * 100.0f;
+
+                csvResponse += String(taskName) + "," +
+                            String(pxTaskStatusArray[i].eCurrentState) + "," +
+                            String(pxTaskStatusArray[i].uxCurrentPriority) + "," +
+                            String(pxTaskStatusArray[i].usStackHighWaterMark) + "," +
+                            String(pxTaskStatusArray[i].ulRunTimeCounter) + "," +
+                            String(cpuPercent, 2) + "\n";
+            }
+
+            heap_caps_free(pxTaskStatusArray);
+
+            return request->reply(200, MIMETYPE_PLAIN, csvResponse.c_str()); }
 
     );
 
     server.on(
         "/stats", HTTP_GET, [](PsychicRequest *request)
         {
-                if (samePageIsCached(request, contentCreationTime, etagValue))
-                    return request->reply(304);
-    
-                extern const uint8_t stats_start[] asm("_binary_src_webui_stats_html_gz_start");
-                extern const uint8_t stats_end[] asm("_binary_src_webui_stats_html_gz_end");   
-    
-                PsychicResponse response = PsychicResponse(request);
-                addStaticContentHeaders(response, contentCreationTime, etagValue);
-                response.addHeader(CONTENT_ENCODING, GZIP);
-                response.setContentType(TEXT_HTML);
-                const size_t size =(stats_end - stats_start);
-                response.setContent(stats_start, size);
-                return response.send(); }
+            if (samePageIsCached(request, contentCreationTime, etagValue))
+                return request->reply(304);
+
+            extern const uint8_t stats_start[] asm("_binary_src_webui_stats_html_gz_start");
+            extern const uint8_t stats_end[] asm("_binary_src_webui_stats_html_gz_end");   
+
+            PsychicResponse response = PsychicResponse(request);
+            addStaticContentHeaders(response, contentCreationTime, etagValue);
+            response.addHeader(CONTENT_ENCODING, GZIP);
+            response.setContentType(TEXT_HTML);
+            const size_t size =(stats_end - stats_start);
+            response.setContent(stats_start, size);
+            return response.send(); }
 
     );
 #endif
