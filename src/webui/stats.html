@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>System Stats</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 20px;
+            background-color: #f4f4f4;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            background-color: white;
+        }
+
+        th,
+        td {
+            padding: 10px;
+            text-align: center;
+            border-bottom: 1px solid #ddd;
+        }
+
+        td:first-child {
+            text-align: left;
+        }
+
+        th {
+            background-color: #007bff;
+            color: white;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        tr:hover {
+            background-color: #f0f0f0;
+        }
+
+        #stats {
+            text-align: center;
+            color: #777;
+        }
+
+        #state-explanation {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: white;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            border-radius: 5px;
+        }
+
+        #state-explanation h2 {
+            color: #007bff;
+        }
+    </style>
+    <script>
+        const taskStates = {
+            0: "Running",
+            1: "Ready",
+            2: "Blocked",
+            3: "Suspended",
+            4: "Deleted"
+        };
+
+        async function fetchStats() {
+            const response = await fetch('/api/taskstats');
+            if (!response.ok) {
+                console.error("Error fetching stats:", response.status, response.statusText);
+                document.getElementById('stats').innerHTML = "Error fetching data.";
+                return;
+            }
+
+            const csvData = await response.text();
+            const rows = csvData.split('\n');
+            const data = [];
+            const headers = rows[0].split(',');
+
+            for (let i = 1; i < rows.length; i++) {
+                const cells = rows[i].split(',');
+                if (cells.length < headers.length) continue;
+
+                const rowData = {};
+                for (let j = 0; j < headers.length; j++) {
+                    rowData[headers[j]] = cells[j];
+                }
+                data.push(rowData);
+            }
+
+            data.sort((a, b) => parseFloat(b['CPU%']) - parseFloat(a['CPU%']));
+
+            const table = document.createElement('table');
+            const thead = table.createTHead();
+            const headerRow = thead.insertRow();
+            headers.forEach(header => {
+                const th = document.createElement('th');
+                th.textContent = header;
+                headerRow.appendChild(th);
+            });
+
+            const tbody = table.createTBody();
+            data.forEach(item => {
+                const tr = tbody.insertRow();
+                headers.forEach(header => {
+                    const td = tr.insertCell();
+                    let cellValue = item[header];
+                    if (header === 'State') {
+                        cellValue = taskStates[cellValue] || "Unknown";
+                    } else if (header === 'CPU%') {
+                        const cpuValue = parseFloat(cellValue);
+                        cellValue = isNaN(cpuValue) ? cellValue : cpuValue.toFixed(2) + "%";
+                    }
+                    td.textContent = cellValue;
+                });
+            });
+
+            document.getElementById('stats').innerHTML = '';
+            document.getElementById('stats').appendChild(table);
+        }
+
+        window.onload = fetchStats;
+    </script>
+</head>
+
+<body>
+    <h1>System Statistics</h1>
+    <div id="stats">Loading...</div>
+
+    <div id="state-explanation">
+        <h2>Task States Explanation</h2>
+        <ul>
+            <li><strong>Running</strong>: The task is currently executing on the CPU.</li>
+            <li><strong>Ready</strong>: The task is ready to run but is waiting for CPU time.</li>
+            <li><strong>Blocked</strong>: The task is waiting for an event before it can continue.</li>
+            <li><strong>Suspended</strong>: The task has been explicitly paused and will not run until resumed.</li>
+            <li><strong>Deleted</strong>: The task has been deleted and is awaiting cleanup.</li>
+        </ul>
+    </div>
+</body>
+
+</html>

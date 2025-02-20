@@ -5,11 +5,9 @@
 #include <PsychicHttp.h>
 #include <ESP32_VS1053_Stream.h>
 
-#include "build_epoch.h"
 #include "serverMessage_t.h"
 #include "playerMessage_t.h"
 #include "playList.h"
-#include "index_htm_gz.h"
 
 const char *FAVORITES_FOLDER = "/"; /* if this is a folder use a closing slash */
 

@@ -1,10 +1,44 @@
 #include "servertask.hpp"
 
-static const char *HEADER_MODIFIED_SINCE = "If-Modified-Since";
+static constexpr char *TEXT_HTML = "text/html";
+static constexpr char *TEXT_PLAIN = "text/plain";
 
-static inline __attribute__((always_inline)) bool htmlUnmodified(PsychicRequest *request, const char *date)
+static constexpr char *CONTENT_ENCODING = "Content-Encoding";
+static constexpr char *GZIP = "gzip";
+
+static constexpr char *IF_MODIFIED_SINCE = "If-Modified-Since";
+static constexpr char *IF_NONE_MATCH = "If-None-Match";
+
+static char contentCreationTime[30];
+
+static inline bool samePageIsCached(PsychicRequest *request, const char *date, const char *etag)
 {
-    return request->hasHeader(HEADER_MODIFIED_SINCE) && request->header(HEADER_MODIFIED_SINCE).equals(date);
+    bool modifiedSince = request->hasHeader(IF_MODIFIED_SINCE) && request->header(IF_MODIFIED_SINCE).equals(date);
+    bool noneMatch = request->hasHeader(IF_NONE_MATCH) && request->header(IF_NONE_MATCH).equals(etag);
+
+    return modifiedSince || noneMatch;
+}
+
+static void addStaticContentHeaders(PsychicResponse &response, const char *date, const char *etag)
+{
+    response.addHeader("Last-Modified", date);
+    response.addHeader("Cache-Control", "public, max-age=31536000");
+    response.addHeader("ETag", etag);
+}
+
+static char etagValue[16];
+static void generateETag(const char *date)
+{
+    uint32_t hash = 0;
+    for (const char *p = date; *p; ++p)
+        hash = (hash * 31) + *p; // Simple hash function
+
+    snprintf(etagValue, sizeof(etagValue), "\"%" PRIX32 "\"", hash);
+}
+
+time_t time_diff(struct tm *start, struct tm *end)
+{
+    return mktime(end) - mktime(start);
 }
 
 void sendServerMessage(serverMessage::Type type, const char *str = NULL, bool singleClient = false, size_t value = 0, size_t value2 = 0)
@@ -197,39 +231,40 @@ static bool saveItemToFavorites(PsychicWebSocketClient *client, const char *file
     }
 }
 
-static void addStaticContentHeaders(PsychicResponse &response, const char *date)
-{
-    response.addHeader("Last-Modified", date);
-    response.addHeader("Cache-Control", "public, max-age=31536000");
-}
-
 static void webserverUrlSetup()
 {
-    const struct tm *timeinfo = gmtime(&BUILD_EPOCH);
+    const time_t rawTime = time(NULL);
+    struct tm *timeinfo = gmtime(&rawTime);
+    strftime(contentCreationTime, sizeof(contentCreationTime), "%a, %d %b %Y %X GMT", timeinfo);
 
-    static char lastModified[30];
-    strftime(lastModified, sizeof(lastModified), "%a, %d %b %Y %X GMT", timeinfo);
+    generateETag(contentCreationTime);
 
     constexpr const char *MIMETYPE_HTML{"text/html"};
+    constexpr const char *MIMETYPE_PLAIN{"text/plain"};
     constexpr const char *HEADER_CONTENT_ENCODING{"Content-Encoding"};
     constexpr const char *CONTENT_ENCODING_GZIP{"gzip"};
 
     server.on(
         "/", [](PsychicRequest *request)
         {
-            if (htmlUnmodified(request, lastModified))   
+            if (samePageIsCached(request, contentCreationTime, etagValue))
                 return request->reply(304);
 
+            extern const uint8_t index_start[] asm("_binary_src_webui_index_html_gz_start");
+            extern const uint8_t index_end[] asm("_binary_src_webui_index_html_gz_end");                
+
             PsychicResponse response = PsychicResponse(request);
+            addStaticContentHeaders(response, contentCreationTime, etagValue);
             response.addHeader(HEADER_CONTENT_ENCODING, CONTENT_ENCODING_GZIP);
-            response.setContent(index_htm_gz, index_htm_gz_len);
-            addStaticContentHeaders(response, lastModified);
+            response.setContentType(MIMETYPE_HTML);
+            const size_t size = index_end - index_start;
+            response.setContent(index_start, size);
             return response.send(); });
 
     server.on(
         "/scripturl", [](PsychicRequest *request)
         {
-            if (htmlUnmodified(request, lastModified))
+            if (samePageIsCached(request, contentCreationTime, etagValue))
                 return request->reply(304);
 
             String content = SCRIPT_URL;
@@ -242,14 +277,14 @@ static void webserverUrlSetup()
                 content.concat("\n");
             }
             PsychicResponse response = PsychicResponse(request);
+            addStaticContentHeaders(response, contentCreationTime, etagValue);
             response.setContent(content.c_str());
-            addStaticContentHeaders(response, lastModified);
             return response.send(); });
 
     server.on(
         "/stations", [](PsychicRequest *request)
         {
-            if (htmlUnmodified(request, lastModified))
+            if (samePageIsCached(request, contentCreationTime, etagValue))
                 return request->reply(304);
 
             String content;
@@ -261,12 +296,72 @@ static void webserverUrlSetup()
             }
             PsychicResponse response = PsychicResponse(request);
             response.setContent(content.c_str());
-            addStaticContentHeaders(response, lastModified);
+            addStaticContentHeaders(response, contentCreationTime, etagValue);
             return response.send(); });
 
     server.on(
         "/favorites", [](PsychicRequest *request)
         { return request->reply(favoritesToCStruct().c_str()); });
+
+#if defined(CORE_DEBUG_LEVEL) && (CORE_DEBUG_LEVEL >= 3)
+    server.on(
+        "/api/taskstats", HTTP_GET, [](PsychicRequest *request)
+        {
+                uint32_t totalRunTime;
+                UBaseType_t taskCount = uxTaskGetNumberOfTasks();
+    
+                TaskStatus_t *pxTaskStatusArray = (TaskStatus_t *)heap_caps_malloc(taskCount * sizeof(TaskStatus_t), MALLOC_CAP_INTERNAL);
+                if (!pxTaskStatusArray) 
+                    return request->reply(500, TEXT_PLAIN, "Memory allocation failed");
+    
+                UBaseType_t retrievedTasks = uxTaskGetSystemState(pxTaskStatusArray, taskCount, &totalRunTime);
+                if (totalRunTime == 0 || retrievedTasks == 0) 
+                {
+                    heap_caps_free(pxTaskStatusArray);
+                    return request->reply(500, TEXT_PLAIN, "Failed to get task stats");
+                }
+    
+                String csvResponse = "Name,State,Priority,Stack,Runtime,CPU%\n";
+    
+                for (UBaseType_t i = 0; i < retrievedTasks; i++) 
+                {
+                    const char *taskName = pxTaskStatusArray[i].pcTaskName;
+    
+                    float cpuPercent = ((float)pxTaskStatusArray[i].ulRunTimeCounter / (float)totalRunTime) * 100.0f;
+    
+                    csvResponse += String(taskName) + "," +
+                                String(pxTaskStatusArray[i].eCurrentState) + "," +
+                                String(pxTaskStatusArray[i].uxCurrentPriority) + "," +
+                                String(pxTaskStatusArray[i].usStackHighWaterMark) + "," +
+                                String(pxTaskStatusArray[i].ulRunTimeCounter) + "," +
+                                String(cpuPercent, 2) + "\n";
+                }
+    
+                heap_caps_free(pxTaskStatusArray);
+    
+                return request->reply(200, MIMETYPE_PLAIN, csvResponse.c_str()); }
+
+    );
+
+    server.on(
+        "/stats", HTTP_GET, [](PsychicRequest *request)
+        {
+                if (samePageIsCached(request, contentCreationTime, etagValue))
+                    return request->reply(304);
+    
+                extern const uint8_t stats_start[] asm("_binary_src_webui_stats_html_gz_start");
+                extern const uint8_t stats_end[] asm("_binary_src_webui_stats_html_gz_end");   
+    
+                PsychicResponse response = PsychicResponse(request);
+                addStaticContentHeaders(response, contentCreationTime, etagValue);
+                response.addHeader(CONTENT_ENCODING, GZIP);
+                response.setContentType(TEXT_HTML);
+                const size_t size =(stats_end - stats_start);
+                response.setContent(stats_start, size);
+                return response.send(); }
+
+    );
+#endif
 
     constexpr const char *MIMETYPE_SVG{"image/svg+xml"};
 
@@ -275,13 +370,13 @@ static void webserverUrlSetup()
         server.on(
             uri, [icon](PsychicRequest *request)
             {
-                if (htmlUnmodified(request, lastModified))
+                if (samePageIsCached(request, contentCreationTime, etagValue))
                     return request->reply(304);
 
                 PsychicResponse response = PsychicResponse(request);
                 response.setContent(icon);
                 response.setContentType(MIMETYPE_SVG);
-                addStaticContentHeaders(response, lastModified);
+                addStaticContentHeaders(response, contentCreationTime, etagValue);
                 return response.send(); });
     };
 
@@ -616,7 +711,7 @@ static esp_err_t wsFrameHandler(PsychicWebSocketRequest *request, httpd_ws_frame
 
 void serverTask(void *parameter)
 {
-    server.config.max_uri_handlers = 25;
+    server.config.max_uri_handlers = 20;
     server.config.max_open_sockets = 10;
 
     server.listen(80);
