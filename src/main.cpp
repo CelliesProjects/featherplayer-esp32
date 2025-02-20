@@ -124,7 +124,7 @@ void setup()
     BaseType_t taskResult = xTaskCreate(
         tftTask,
         "tftTask",
-        4096,
+        1024 * 3,
         NULL,
         tskIDLE_PRIORITY + 10,
         NULL);
@@ -190,7 +190,7 @@ void setup()
     taskResult = xTaskCreate(
         playerTask,
         "playerTask",
-        6144,
+        1024 * 5,
         NULL,
         tskIDLE_PRIORITY + 5,
         NULL);
