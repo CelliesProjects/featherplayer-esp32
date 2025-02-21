@@ -127,7 +127,10 @@
             document.getElementById('stats').appendChild(table);
         }
 
-        window.onload = fetchStats;
+        window.onload = function () {
+            fetchStats();
+            setInterval(fetchStats, 2000);
+        };
     </script>
 </head>
 
