@@ -207,7 +207,7 @@ void setup()
         "serverTask",
         4096,
         NULL,
-        tskIDLE_PRIORITY,
+        tskIDLE_PRIORITY + 4,
         NULL);
 
     if (taskResult != pdPASS)
