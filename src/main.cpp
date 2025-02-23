@@ -31,6 +31,25 @@ extern QueueHandle_t tftQueue;
 extern void tftTask(void *parameter);
 extern void sendTftMessage(tftMessage::Type type, const char *str = NULL, size_t value1 = 0, size_t value2 = 0);
 
+void WiFiEvent(WiFiEvent_t event)
+{
+    switch (event)
+    {
+    case ARDUINO_EVENT_WIFI_STA_GOT_IP:
+        sendTftMessage(tftMessage::SHOW_IPADDRESS);
+        break;
+
+    case ARDUINO_EVENT_WIFI_STA_LOST_IP:
+    case ARDUINO_EVENT_WIFI_STA_STOP:
+    case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
+        sendTftMessage(tftMessage::SHOW_IPADDRESS);
+        break;
+
+    default:
+        break;
+    }
+}
+
 static void mountSDcard()
 {
     const int SDREADER_CS = 5;
@@ -163,17 +182,21 @@ void setup()
                 delay(1000); /* system is halted */
         }
     }
+    sendTftMessage(tftMessage::SHOW_IPADDRESS);
 
     sendTftMessage(tftMessage::SYSTEM_MESSAGE, "Connecting WiFi...");
 
     log_i("FeatherPlayer esp32 connecting to %s", SSID);
+
+    WiFi.onEvent(WiFiEvent);
+    WiFi.setAutoReconnect(true);
 
     WiFi.begin(SSID, PSK);
     WiFi.setSleep(false);
     while (!WiFi.isConnected())
         delay(10);
 
-    log_i("WiFi connected - IP %s", WiFi.localIP().toString());
+    log_i("WiFi connected - IP %s", WiFi.localIP().toString().c_str());
 
     configTzTime(TIMEZONE, NTP_POOL);
 

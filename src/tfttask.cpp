@@ -147,18 +147,32 @@ void tftTask(void *parameter)
                 break;
             case tftMessage::SHOW_IPADDRESS:
             {
-                tft.setFont(&FreeSansBold18pt7b);
-                tft.setTextSize(1);
-                tft.setTextColor(TEXT_COLOR);
-                int16_t xpos;
-                int16_t ypos;
-                uint16_t height;
-                uint16_t width;
-                tft.getTextBounds(WiFi.localIP().toString().c_str(), 0, 0, &xpos, &ypos, &width, &height);
-                tft.setCursor((tft.width() / 2) - (width / 2), tft.height() - (height / 2) + 4);
+                constexpr int16_t spriteHeight = 40;
+                GFXcanvas16 ipAddressCanvas(tft.width(), spriteHeight);
+
+                if (!ipAddressCanvas.getBuffer())
+                {
+                    log_e("could not allocate ipaddress canvas");
+                    break;
+                }
+                ipAddressCanvas.fillScreen(BACKGROUND_COLOR);
+                ipAddressCanvas.setFont(&FreeSansBold18pt7b);
+                ipAddressCanvas.setTextSize(1);
+                ipAddressCanvas.setTextColor(ST77XX_WHITE);
+
+                String ipAddress = WiFi.localIP().toString();
+                int16_t xPos, yPos;
+                uint16_t width, height;
+
+                ipAddressCanvas.getTextBounds(ipAddress.c_str(), 0, 0, &xPos, &yPos, &width, &height);
+
+                int16_t x = ((ipAddressCanvas.width() - width) / 2) - 4;
+                int16_t y = (ipAddressCanvas.height() - 8);
+                ipAddressCanvas.setCursor(x, y);
+                ipAddressCanvas.print(ipAddress);
                 {
                     ScopedMutex lock(spiMutex);
-                    tft.print(WiFi.localIP().toString().c_str());
+                    tft.drawRGBBitmap(0, tft.height() - spriteHeight, ipAddressCanvas.getBuffer(), tft.width(), spriteHeight);
                 }
                 break;
             }
@@ -232,7 +246,7 @@ void tftTask(void *parameter)
             {
                 ScopedMutex lock(spiMutex);
                 tft.drawRGBBitmap(0, TOP_OF_SCROLLER, canvas.getBuffer(), canvas.width(), canvas.height());
-            }            
+            }
             streamTitleOffset = (streamTitleOffset < (canvas.width() + strWidth)) ? streamTitleOffset + 2 : 0;
             clearTitle = false;
         }
