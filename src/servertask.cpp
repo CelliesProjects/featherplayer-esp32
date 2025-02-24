@@ -10,23 +10,23 @@ static constexpr char *IF_MODIFIED_SINCE = "If-Modified-Since";
 static constexpr char *IF_NONE_MATCH = "If-None-Match";
 
 static char contentCreationTime[30];
+static char etagValue[16];
 
-static inline bool samePageIsCached(PsychicRequest *request, const char *date, const char *etag)
+static inline bool samePageIsCached(PsychicRequest *request)
 {
-    bool modifiedSince = request->hasHeader(IF_MODIFIED_SINCE) && request->header(IF_MODIFIED_SINCE).equals(date);
-    bool noneMatch = request->hasHeader(IF_NONE_MATCH) && request->header(IF_NONE_MATCH).equals(etag);
+    bool modifiedSince = request->hasHeader(IF_MODIFIED_SINCE) && request->header(IF_MODIFIED_SINCE).equals(contentCreationTime);
+    bool noneMatch = request->hasHeader(IF_NONE_MATCH) && request->header(IF_NONE_MATCH).equals(etagValue);
 
     return modifiedSince || noneMatch;
 }
 
-static void addStaticContentHeaders(PsychicResponse &response, const char *date, const char *etag)
+static void addStaticContentHeaders(PsychicResponse &response)
 {
-    response.addHeader("Last-Modified", date);
+    response.addHeader("Last-Modified", contentCreationTime);
     response.addHeader("Cache-Control", "public, max-age=31536000");
-    response.addHeader("ETag", etag);
+    response.addHeader("ETag", etagValue);
 }
 
-static char etagValue[16];
 static void generateETag(const char *date)
 {
     uint32_t hash = 0;
@@ -247,14 +247,14 @@ static void webserverUrlSetup()
     server.on(
         "/", [](PsychicRequest *request)
         {
-            if (samePageIsCached(request, contentCreationTime, etagValue))
+            if (samePageIsCached(request))
                 return request->reply(304);
 
             extern const uint8_t index_start[] asm("_binary_src_webui_index_html_gz_start");
             extern const uint8_t index_end[] asm("_binary_src_webui_index_html_gz_end");                
 
             PsychicResponse response = PsychicResponse(request);
-            addStaticContentHeaders(response, contentCreationTime, etagValue);
+            addStaticContentHeaders(response);
             response.addHeader(HEADER_CONTENT_ENCODING, CONTENT_ENCODING_GZIP);
             response.setContentType(MIMETYPE_HTML);
             const size_t size = index_end - index_start;
@@ -264,7 +264,7 @@ static void webserverUrlSetup()
     server.on(
         "/scripturl", [](PsychicRequest *request)
         {
-            if (samePageIsCached(request, contentCreationTime, etagValue))
+            if (samePageIsCached(request))
                 return request->reply(304);
 
             String content = SCRIPT_URL;
@@ -277,14 +277,14 @@ static void webserverUrlSetup()
                 content.concat("\n");
             }
             PsychicResponse response = PsychicResponse(request);
-            addStaticContentHeaders(response, contentCreationTime, etagValue);
+            addStaticContentHeaders(response);
             response.setContent(content.c_str());
             return response.send(); });
 
     server.on(
         "/stations", [](PsychicRequest *request)
         {
-            if (samePageIsCached(request, contentCreationTime, etagValue))
+            if (samePageIsCached(request))
                 return request->reply(304);
 
             String content;
@@ -296,7 +296,7 @@ static void webserverUrlSetup()
             }
             PsychicResponse response = PsychicResponse(request);
             response.setContent(content.c_str());
-            addStaticContentHeaders(response, contentCreationTime, etagValue);
+            addStaticContentHeaders(response);
             return response.send(); });
 
     server.on(
@@ -346,14 +346,14 @@ static void webserverUrlSetup()
     server.on(
         "/stats", HTTP_GET, [](PsychicRequest *request)
         {
-            if (samePageIsCached(request, contentCreationTime, etagValue))
+            if (samePageIsCached(request))
                 return request->reply(304);
 
             extern const uint8_t stats_start[] asm("_binary_src_webui_stats_html_gz_start");
             extern const uint8_t stats_end[] asm("_binary_src_webui_stats_html_gz_end");   
 
             PsychicResponse response = PsychicResponse(request);
-            addStaticContentHeaders(response, contentCreationTime, etagValue);
+            addStaticContentHeaders(response);
             response.addHeader(CONTENT_ENCODING, GZIP);
             response.setContentType(TEXT_HTML);
             const size_t size =(stats_end - stats_start);
@@ -370,13 +370,13 @@ static void webserverUrlSetup()
         server.on(
             uri, [icon](PsychicRequest *request)
             {
-                if (samePageIsCached(request, contentCreationTime, etagValue))
+                if (samePageIsCached(request))
                     return request->reply(304);
 
                 PsychicResponse response = PsychicResponse(request);
-                response.setContent(icon);
+                addStaticContentHeaders(response);
                 response.setContentType(MIMETYPE_SVG);
-                addStaticContentHeaders(response, contentCreationTime, etagValue);
+                response.setContent(icon);
                 return response.send(); });
     };
 
