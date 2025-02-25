@@ -22,7 +22,7 @@ float map_range(const float input,
 
 void tftTask(void *parameter)
 {
-    // turn on the TFT / I2C power supply
+    // turn on the TFT / I2C power supply https://learn.adafruit.com/esp32-s3-reverse-tft-feather/pinouts#tft-display-3138945
     pinMode(TFT_I2C_POWER, OUTPUT);
     digitalWrite(TFT_I2C_POWER, HIGH);
     delay(5);
