@@ -3,8 +3,8 @@
 
 #include <Arduino.h>
 #include <vector>
-#include <mutex>
 #include "presets.h"
+#include "ScopedMutex.h"
 
 #define PLAYLIST_MAX_ITEMS 100
 #define PLAYLIST_MAX_URL_LENGTH 255
@@ -31,36 +31,43 @@ struct playListItem
 
 class playList_t
 {
-
 public:
-    playList_t() : listMutex(), currentItemMutex() {}
+    playList_t()
+    {
+        listMutex = xSemaphoreCreateMutex();
+        xSemaphoreGive(listMutex);
+        currentItemMutex = xSemaphoreCreateMutex();
+        xSemaphoreGive(currentItemMutex);
+    }
 
     ~playList_t()
     {
+        vSemaphoreDelete(listMutex);
+        vSemaphoreDelete(currentItemMutex);
         clear();
     }
 
     int size()
     {
-        std::lock_guard<std::mutex> lock(listMutex);
+        ScopedMutex lock(listMutex);
         return list.size();
     }
 
     void get(const uint32_t index, playListItem &item)
     {
-        std::lock_guard<std::mutex> lock(listMutex);
+        ScopedMutex lock(listMutex);
         item = (index < list.size()) ? list[index] : (playListItem){};
     }
 
     const String url(const uint32_t index)
     {
-        std::lock_guard<std::mutex> lock(listMutex);
+        ScopedMutex lock(listMutex);
         return (index < list.size()) ? ((list[index].type == HTTP_PRESET) ? preset[list[index].index].url : list[index].url) : "";
     }
 
     streamType type(const uint32_t index)
     {
-        std::lock_guard<std::mutex> lock(listMutex);
+        ScopedMutex lock(listMutex);
         if (list.size() < index)
             return TYPE_ERROR;
         return list[index].type;
@@ -68,7 +75,7 @@ public:
 
     const String name(const uint32_t index)
     {
-        std::lock_guard<std::mutex> lock(listMutex);
+        ScopedMutex lock(listMutex);
         if (index >= list.size())
             return "";
         switch (list[index].type)
@@ -84,21 +91,21 @@ public:
 
     void add(const playListItem &item)
     {
-        std::lock_guard<std::mutex> lock(listMutex);
+        ScopedMutex lock(listMutex);
         if (list.size() < PLAYLIST_MAX_ITEMS)
             list.push_back(item);
     }
 
     void remove(const uint32_t index)
     {
-        std::lock_guard<std::mutex> lock(listMutex);
+        ScopedMutex lock(listMutex);
         if (list.size() > index)
             list.erase(list.begin() + index);
     }
 
     void clear()
     {
-        std::lock_guard<std::mutex> lock(listMutex);
+        ScopedMutex lock(listMutex);
         list.clear();
     }
 
@@ -106,21 +113,21 @@ public:
 
     int8_t currentItem()
     {
-        std::lock_guard<std::mutex> lock(currentItemMutex);
+        ScopedMutex lock(currentItemMutex);
         return _currentItem;
     }
 
     void setCurrentItem(int8_t index)
     {
-        std::lock_guard<std::mutex> lock(currentItemMutex);
+        ScopedMutex lock(currentItemMutex);
         _currentItem = index;
     }
 
 private:
     std::vector<playListItem> list;
-    std::mutex listMutex;
+    SemaphoreHandle_t listMutex;
     int8_t _currentItem{PLAYLIST_STOPPED};
-    std::mutex currentItemMutex;
+    SemaphoreHandle_t currentItemMutex;
 };
 
 #endif

@@ -6,7 +6,7 @@ String playList_t::toString()
     s.concat(currentItem());
     s.concat('\n');
 
-    std::lock_guard<std::mutex> lock(listMutex);
+    ScopedMutex lock(listMutex);
 
     for (const auto &item : list)
     {
