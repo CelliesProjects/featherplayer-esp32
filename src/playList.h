@@ -42,9 +42,9 @@ public:
 
     ~playList_t()
     {
+        clear();
         vSemaphoreDelete(listMutex);
         vSemaphoreDelete(currentItemMutex);
-        clear();
     }
 
     int size()
