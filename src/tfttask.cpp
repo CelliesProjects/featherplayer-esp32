@@ -30,11 +30,11 @@ void tftTask(void *parameter)
     static const auto BACKGROUND_COLOR = 0xa0e0; // 8 bit value = #a61d04
     static const auto TEXT_COLOR = 0xf79b;       // 8 bit value = #f5f4e2 yellowish
 
-    static Adafruit_ST7789 tft = Adafruit_ST7789(TFT_CS, TFT_DC, TFT_RST);
+    static LGFX tft;
 
     {
         ScopedMutex lock(spiMutex);
-        tft.init(135, 240, SPI_MODE0);
+        tft.init();
         tft.setRotation(1);
         tft.fillScreen(BACKGROUND_COLOR);
         tft.setTextColor(TEXT_COLOR, BACKGROUND_COLOR);
@@ -46,7 +46,8 @@ void tftTask(void *parameter)
     ledcAttachChannel(TFT_BACKLITE, 1220, SOC_LEDC_TIMER_BIT_WIDTH, 0);
     ledcWrite(TFT_BACKLITE, LEDC_MAX_PWM_VALUE / 10);
 
-    static GFXcanvas16 canvas(tft.width(), 20);
+    static LGFX_Sprite canvas(&tft);
+    canvas.createSprite(tft.width(), 20);
     static int16_t strX, strY;
     static uint16_t strWidth, strHeight;
 
@@ -65,15 +66,15 @@ void tftTask(void *parameter)
             switch (msg.type)
             {
             case tftMessage::SYSTEM_MESSAGE:
-                canvas.fillScreen(ST77XX_RED);
-                canvas.setTextColor(ST77XX_WHITE);
+                canvas.fillScreen(lgfx::color565(255, 0, 0));       // Red
+                canvas.setTextColor(lgfx::color565(255, 255, 255)); // White
                 canvas.setFont(&FreeSansBold9pt7b);
                 canvas.setTextSize(1);
-                canvas.setCursor(4, canvas.height() - 6);
+                canvas.setCursor(4, canvas.height() - canvas.fontHeight());
                 canvas.print(msg.str);
                 {
                     ScopedMutex lock(spiMutex);
-                    tft.drawRGBBitmap(0, 0, canvas.getBuffer(), canvas.width(), canvas.height());
+                    canvas.pushSprite(0, 0);
                 }
                 break;
 
@@ -84,8 +85,8 @@ void tftTask(void *parameter)
                 const int16_t FILLED_AREA = map_range(msg.value1, 0, msg.value2, 0, tft.width() + 1);
                 {
                     ScopedMutex lock(spiMutex);
-                    tft.fillRect(0, HEIGHT_OFFSET, FILLED_AREA, HEIGHT_IN_PIXELS, ST77XX_BLUE);
-                    tft.fillRect(FILLED_AREA, HEIGHT_OFFSET, tft.width() - FILLED_AREA, HEIGHT_IN_PIXELS, ST77XX_WHITE);
+                    tft.fillRect(0, HEIGHT_OFFSET, FILLED_AREA, HEIGHT_IN_PIXELS, lgfx::color565(0, 0, 255));
+                    tft.fillRect(FILLED_AREA, HEIGHT_OFFSET, tft.width() - FILLED_AREA, HEIGHT_IN_PIXELS, lgfx::color565(255, 255, 255));
                 }
                 break;
             }
@@ -103,11 +104,11 @@ void tftTask(void *parameter)
                 canvas.fillScreen(0);
                 canvas.setFont(&FreeSansBold9pt7b);
                 canvas.setTextSize(1);
-                canvas.setCursor(4, canvas.height() - 6);
+                canvas.setCursor(4, canvas.height() - canvas.fontHeight());
                 canvas.print(msg.str);
                 {
                     ScopedMutex lock(spiMutex);
-                    tft.drawRGBBitmap(0, 0, canvas.getBuffer(), canvas.width(), canvas.height());
+                    canvas.pushSprite(0, 0);
                 }
 
                 break;
@@ -125,18 +126,19 @@ void tftTask(void *parameter)
                 snprintf(streamTitle, sizeof(streamTitle), "%s", msg.str);
                 tft.setTextSize(1);
                 tft.setFont(&FreeSansBold9pt7b);
-                tft.getTextBounds(streamTitle, 0, 0, &strX, &strY, &strWidth, &strHeight);
+                strWidth = tft.textWidth(streamTitle);
+                strHeight = tft.fontHeight();
                 break;
             case tftMessage::SHOW_CODEC:
                 tft.setTextSize(1);
                 tft.setTextColor(TEXT_COLOR);
                 tft.setFont(&FreeSansBold9pt7b);
-                tft.setCursor(5, 66);
+                tft.setCursor(5, 55);
                 {
                     ScopedMutex lock(spiMutex);
                     tft.print(msg.str);
                 }
-                tft.setFont();
+                tft.setFont(0);
                 tft.setTextSize(1);
                 tft.setCursor(152, 53);
                 {
@@ -148,7 +150,8 @@ void tftTask(void *parameter)
             case tftMessage::SHOW_IPADDRESS:
             {
                 constexpr int16_t spriteHeight = 40;
-                GFXcanvas16 ipAddressCanvas(tft.width(), spriteHeight);
+                LGFX_Sprite ipAddressCanvas(&tft);
+                ipAddressCanvas.createSprite(tft.width(), spriteHeight);
 
                 if (!ipAddressCanvas.getBuffer())
                 {
@@ -158,21 +161,20 @@ void tftTask(void *parameter)
                 ipAddressCanvas.fillScreen(BACKGROUND_COLOR);
                 ipAddressCanvas.setFont(&FreeSansBold18pt7b);
                 ipAddressCanvas.setTextSize(1);
-                ipAddressCanvas.setTextColor(ST77XX_WHITE);
+                ipAddressCanvas.setTextColor(lgfx::color565(255, 255, 255));
 
                 String ipAddress = WiFi.localIP().toString();
-                int16_t xPos, yPos;
-                uint16_t width, height;
 
-                ipAddressCanvas.getTextBounds(ipAddress.c_str(), 0, 0, &xPos, &yPos, &width, &height);
+                uint16_t width = ipAddressCanvas.textWidth(ipAddress.c_str());
+                uint16_t height = ipAddressCanvas.fontHeight();
 
                 int16_t x = ((ipAddressCanvas.width() - width) / 2) - 4;
-                int16_t y = (ipAddressCanvas.height() - 8);
+                int16_t y = (ipAddressCanvas.height() - height);
                 ipAddressCanvas.setCursor(x, y);
                 ipAddressCanvas.print(ipAddress);
                 {
                     ScopedMutex lock(spiMutex);
-                    tft.drawRGBBitmap(0, tft.height() - spriteHeight, ipAddressCanvas.getBuffer(), tft.width(), spriteHeight);
+                    ipAddressCanvas.pushSprite(0, tft.height() - spriteHeight);
                 }
                 break;
             }
@@ -190,8 +192,8 @@ void tftTask(void *parameter)
                 const int16_t FILLED_AREA = map_range(msg.value1, 0, msg.value2, 0, BAR_WIDTH);
                 {
                     ScopedMutex lock(spiMutex);
-                    tft.fillRect(X_OFFSET, HEIGHT_OFFSET, FILLED_AREA, BAR_HEIGHT, ST77XX_GREEN);
-                    tft.fillRect(X_OFFSET + FILLED_AREA, HEIGHT_OFFSET, BAR_WIDTH - FILLED_AREA, BAR_HEIGHT, ST77XX_RED);
+                    tft.fillRect(X_OFFSET, HEIGHT_OFFSET, FILLED_AREA, BAR_HEIGHT, lgfx::color565(0, 255, 0));
+                    tft.fillRect(X_OFFSET + FILLED_AREA, HEIGHT_OFFSET, BAR_WIDTH - FILLED_AREA, BAR_HEIGHT, lgfx::color565(255, 0, 0));
                 }
                 break;
             }
@@ -205,7 +207,14 @@ void tftTask(void *parameter)
 
         if (showClock && lastClockUpdate != time(NULL))
         {
-            GFXcanvas16 clock(tft.width(), TOP_OF_SCROLLER);
+            // GFXcanvas16 clock(tft.width(), TOP_OF_SCROLLER);
+            LGFX_Sprite clock(&tft);
+            clock.createSprite(tft.width(), TOP_OF_SCROLLER);
+
+            if (!clock.getBuffer())
+            {
+                log_e("could not allocate clock sprite");
+            }
 
             clock.setFont(&FreeSansBold24pt7b);
             clock.setTextSize(2);
@@ -215,22 +224,21 @@ void tftTask(void *parameter)
             time(&t);
             struct tm *timeinfo = localtime(&t);
             char buff[12];
-            int16_t xpos;
-            int16_t ypos;
-            uint16_t height;
-            uint16_t width;
-            strftime(buff, 12, "%R", timeinfo);
-            clock.getTextBounds(buff, 0, 0, &xpos, &ypos, &width, &height);
+            strftime(buff, sizeof(buff), "%R", timeinfo);
+
+            uint16_t width = clock.textWidth(buff);
+            uint16_t height = clock.fontHeight();
+
             clock.setTextColor(TEXT_COLOR);
-            clock.setCursor((clock.width() / 2) - (width / 2) - 5, TOP_OF_SCROLLER - 6);
+            clock.setCursor((clock.width() / 2) - (width / 2) - 5, 0);
             clock.print(buff);
 
             // make the letters a bit wider
-            clock.setCursor((clock.width() / 2) - (width / 2) - 3, TOP_OF_SCROLLER - 6);
+            clock.setCursor((clock.width() / 2) - (width / 2) - 3, 0);
             clock.print(buff);
             {
                 ScopedMutex lock(spiMutex);
-                tft.drawRGBBitmap(0, 0, clock.getBuffer(), clock.width(), clock.height());
+                clock.pushSprite(0, 0);
             }
             lastClockUpdate = time(NULL);
         }
@@ -238,14 +246,14 @@ void tftTask(void *parameter)
         if (streamTitle[0] || clearTitle)
         {
             canvas.fillScreen(0);
-            canvas.setCursor(canvas.width() - streamTitleOffset, canvas.height() - 6);
+            canvas.setCursor(canvas.width() - streamTitleOffset, canvas.height() - canvas.fontHeight());
             canvas.setFont(&FreeSansBold9pt7b);
             canvas.setTextSize(1);
             canvas.setTextWrap(false);
             canvas.print(streamTitle);
             {
                 ScopedMutex lock(spiMutex);
-                tft.drawRGBBitmap(0, TOP_OF_SCROLLER, canvas.getBuffer(), canvas.width(), canvas.height());
+                canvas.pushSprite(0, TOP_OF_SCROLLER);
             }
             streamTitleOffset = (streamTitleOffset < (canvas.width() + strWidth)) ? streamTitleOffset + 2 : 0;
             clearTitle = false;
