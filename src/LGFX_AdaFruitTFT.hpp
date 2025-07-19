@@ -45,6 +45,17 @@ public:
         _bus_instance.config(buscfg);
         _panel.setBus(&_bus_instance);
 
+        auto backlight = new lgfx::Light_PWM();
+
+        lgfx::Light_PWM::config_t light_cfg;
+        light_cfg.pin_bl = TFT_BACKLITE;
+        light_cfg.invert = false;
+        light_cfg.freq = 12000;
+        light_cfg.pwm_channel = 0;
+
+        backlight->config(light_cfg);
+        _panel.setLight(backlight);
+
         setPanel(&_panel);
     }
 
