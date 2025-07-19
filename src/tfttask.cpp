@@ -39,17 +39,18 @@ void tftTask(void *parameter)
         tft.fillScreen(BACKGROUND_COLOR);
         tft.setTextColor(TEXT_COLOR, BACKGROUND_COLOR);
         tft.setTextWrap(false);
+        tft.setBrightness(35);
     }
 
-    const auto LEDC_MAX_PWM_VALUE = (1 << SOC_LEDC_TIMER_BIT_WIDTH) - 1;
-
-    ledcAttachChannel(TFT_BACKLITE, 1220, SOC_LEDC_TIMER_BIT_WIDTH, 0);
-    ledcWrite(TFT_BACKLITE, LEDC_MAX_PWM_VALUE / 10);
-
     static LGFX_Sprite canvas(&tft);
-    canvas.createSprite(tft.width(), 20);
-    static int16_t strX, strY;
-    static uint16_t strWidth, strHeight;
+    if (!canvas.getBuffer() && !canvas.createSprite(tft.width(), 20))
+    {
+        log_e("could not allocate canvas for station-name and scroller. system halted");
+        while (1)
+            delay(100);
+    }
+
+    static uint16_t strWidth;
 
     static char streamTitle[264];
     static int16_t streamTitleOffset = 0;
@@ -127,7 +128,6 @@ void tftTask(void *parameter)
                 tft.setTextSize(1);
                 tft.setFont(&FreeSansBold9pt7b);
                 strWidth = tft.textWidth(streamTitle);
-                strHeight = tft.fontHeight();
                 break;
             case tftMessage::SHOW_CODEC:
                 tft.setTextSize(1);
@@ -150,8 +150,13 @@ void tftTask(void *parameter)
             case tftMessage::SHOW_IPADDRESS:
             {
                 constexpr int16_t spriteHeight = 40;
-                LGFX_Sprite ipAddressCanvas(&tft);
-                ipAddressCanvas.createSprite(tft.width(), spriteHeight);
+                static LGFX_Sprite ipAddressCanvas(&tft);
+                if (!ipAddressCanvas.getBuffer() && !ipAddressCanvas.createSprite(tft.width(), spriteHeight))
+                {
+                    log_e("could not allocate canvas for ipaddress. system halted");
+                    while (1)
+                        delay(100);
+                }
 
                 if (!ipAddressCanvas.getBuffer())
                 {
@@ -207,13 +212,12 @@ void tftTask(void *parameter)
 
         if (showClock && lastClockUpdate != time(NULL))
         {
-            // GFXcanvas16 clock(tft.width(), TOP_OF_SCROLLER);
-            LGFX_Sprite clock(&tft);
-            clock.createSprite(tft.width(), TOP_OF_SCROLLER);
-
-            if (!clock.getBuffer())
+            static LGFX_Sprite clock(&tft);
+            if (!clock.getBuffer() && !clock.createSprite(tft.width(), TOP_OF_SCROLLER))
             {
-                log_e("could not allocate clock sprite");
+                log_e("could not allocate clock sprite. system halted.");
+                while (1)
+                    delay(100);
             }
 
             clock.setFont(&FreeSansBold24pt7b);
@@ -227,13 +231,12 @@ void tftTask(void *parameter)
             strftime(buff, sizeof(buff), "%R", timeinfo);
 
             uint16_t width = clock.textWidth(buff);
-            uint16_t height = clock.fontHeight();
 
             clock.setTextColor(TEXT_COLOR);
             clock.setCursor((clock.width() / 2) - (width / 2) - 5, 0);
             clock.print(buff);
 
-            // make the letters a bit wider
+            // make the characters a bit wider
             clock.setCursor((clock.width() / 2) - (width / 2) - 3, 0);
             clock.print(buff);
             {
