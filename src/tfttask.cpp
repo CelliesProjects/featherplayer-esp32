@@ -27,8 +27,8 @@ void tftTask(void *parameter)
     digitalWrite(TFT_I2C_POWER, HIGH);
     delay(5);
 
-    static const auto BACKGROUND_COLOR = 0xa0e0; // 8 bit value = #a61d04
-    static const auto TEXT_COLOR = 0xf79b;       // 8 bit value = #f5f4e2 yellowish
+    static const auto BACKGROUND_COLOR = 0xa0e0; // RGB888 value = #a61d04
+    static const auto TEXT_COLOR = 0xf79b;       // RGB888 value = #f5f4e2 yellowish
 
     static LGFX tft;
 
@@ -67,8 +67,8 @@ void tftTask(void *parameter)
             switch (msg.type)
             {
             case tftMessage::SYSTEM_MESSAGE:
-                canvas.fillScreen(lgfx::color565(255, 0, 0));       // Red
-                canvas.setTextColor(lgfx::color565(255, 255, 255)); // White
+                canvas.fillScreen(lgfx::color565(255, 0, 0));
+                canvas.setTextColor(lgfx::color565(255, 255, 255));
                 canvas.setFont(&FreeSansBold9pt7b);
                 canvas.setTextSize(1);
                 canvas.setCursor(4, canvas.height() - canvas.fontHeight());
