@@ -158,11 +158,6 @@ void tftTask(void *parameter)
                         delay(100);
                 }
 
-                if (!ipAddressCanvas.getBuffer())
-                {
-                    log_e("could not allocate ipaddress canvas");
-                    break;
-                }
                 ipAddressCanvas.fillScreen(BACKGROUND_COLOR);
                 ipAddressCanvas.setFont(&FreeSansBold18pt7b);
                 ipAddressCanvas.setTextSize(1);
