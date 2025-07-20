@@ -8,21 +8,24 @@ combined with a
 
 ## What is it?
 
-A web-based esp32 music player for mp3/ogg/aac/aac+ webradio, local music files and <strike>files from a sdcard</strike>.<br>Sound output comes from a VS1053 mp3/aac/ogg/wav decoder board.
+A web-based esp32 music player for mp3/ogg/aac/aac+ webradio, local music files and <strike>files from a sdcard</strike>.  
+Sound output comes from a VS1053 mp3/aac/ogg/wav decoder board.
 
-- Supports http, https (insecure mode) and chunked streams.<br>
-- Plays files from local network.
-- <strike>Plays local files from a mounted filesystem.&nbsp;</strike>Working on it.<br>
-- Search for web radio stations on [radio-browser](https://www.radio-browser.info/).
-- Save found radio stations to your favorites.
+- Supports http, https (insecure mode) and chunked streams.  
+- Plays files from local network.  
+- <strike>Plays local files from a mounted filesystem.&nbsp;</strike>Working on it.  
+- Search for web radio stations on [radio-browser](https://www.radio-browser.info/).  
+- Save found radio stations to your favorites.  
 
 ## Web based interface
 
-This player has a web interface and is controlled with a browser on your phone, pc or tablet.<br>The interface is kept very simple, a playlist tab on the right and selectable source tabs on the left.
+This player has a web interface and is controlled with a browser on your phone, pc or tablet.  
+The interface is kept very simple, a playlist tab on the right and selectable source tabs on the left.
 
 <img src="https://github.com/CelliesProjects/streamplayer-feather-develop/assets/24290108/0f9816be-bb35-4cd6-ac24-2fd2bb19561c" width="70%">
 
-After 30 seconds of inactivity the file info overlay is shown.<br>Click on the overlay to hide it or use the info button on the bottom to toggle the overlay.
+After 30 seconds of inactivity the file info overlay is shown.  
+Click on the overlay to hide it or use the info button on the bottom to toggle the overlay.
 
 <img src="https://github.com/CelliesProjects/streamplayer-feather-develop/assets/24290108/0f3a9d8b-a698-450b-82ab-e4ac2b0569a3" width="70%">
 
@@ -46,7 +49,7 @@ git clone https://github.com/CelliesProjects/featherplayer-esp32
 
 ## Add your WiFi credentials
 
-Before compiling the project add the file `include/WiFicredentials.h` to supply your WiFi credentials:
+Before compiling the project add the file `src/WiFicredentials.h` to supply your WiFi credentials:
 
 ```c++
 #ifndef WIFI_SECRETS
@@ -60,9 +63,14 @@ const char *PSK = "your wifi password";
 
 ## Local file playback
 
-This player is written for playback over http(s).<br>What this means is that you will need a (lamp or llmp) webserver to play back your local files.<br>This is because the esp32 does not speak NFS or SMB which are common ways to share files over a network. Instead this player uses a php script on the server to navigate the music folders. Copy this script to the server to use your music library.<br>**This is totally insecure and should only be used on a trusted LAN!** 
+This player is written for playback over http(s).  
+What this means is that you will need a (lamp or llmp) webserver to play back your local files.  
+This is because the esp32 does not speak NFS or SMB which are common ways to share files over a network.  
+Instead this player uses a php script on the server to navigate the music folders. Copy this script to the server to use your music library.  
+**This is totally insecure and should only be used on a trusted LAN!** 
 
-The script `eSP32_vs1053.php` is located in the root of this repository.<br>The scipt is tested with Apache 2.x and lighttpd.
+The script `eSP32_vs1053.php` is located in the root of this repository.  
+The scipt is tested with Apache 2.x and lighttpd.
 
 ## Done!
 
