@@ -6,7 +6,7 @@ combined with a
 
 <img src="https://cdn-shop.adafruit.com/970x728/5691-04.jpg" alt="Adafruit ESP32-S3 Reverse TFT Feather" width="350"> <img src="https://cdn-shop.adafruit.com/970x728/3357-03.jpg" alt="Adafruit Music Maker FeatherWing" width="350">
 
-![featherplayer](https://github.com/user-attachments/assets/05badaa3-f3c6-4891-9839-98702632eee4)
+![output](https://github.com/user-attachments/assets/dbf91db2-5dc3-4b15-a5bc-88297a14d90f)
 
 A web-based esp32 music player for mp3/ogg/aac/aac+ webradio, local music files and <strike>files from a sdcard</strike>.  
 Sound output comes from a VS1053 mp3/aac/ogg/wav decoder board.
