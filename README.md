@@ -6,7 +6,7 @@ combined with a
 
 <img src="https://cdn-shop.adafruit.com/970x728/5691-04.jpg" alt="Adafruit ESP32-S3 Reverse TFT Feather" width="350"> <img src="https://cdn-shop.adafruit.com/970x728/3357-03.jpg" alt="Adafruit Music Maker FeatherWing" width="350">
 
-## What is it?
+![featherplayer](https://github.com/user-attachments/assets/05badaa3-f3c6-4891-9839-98702632eee4)
 
 A web-based esp32 music player for mp3/ogg/aac/aac+ webradio, local music files and <strike>files from a sdcard</strike>.  
 Sound output comes from a VS1053 mp3/aac/ogg/wav decoder board.
@@ -25,7 +25,8 @@ The interface is kept very simple, a playlist tab on the right and selectable so
 <img src="https://github.com/CelliesProjects/streamplayer-feather-develop/assets/24290108/0f9816be-bb35-4cd6-ac24-2fd2bb19561c" width="70%">
 
 After 30 seconds of inactivity the file info overlay is shown.  
-Click on the overlay to hide it or use the info button on the bottom to toggle the overlay.
+Click on the overlay to hide it or use the info button
+ on the bottom to toggle the overlay.
 
 <img src="https://github.com/CelliesProjects/streamplayer-feather-develop/assets/24290108/0f3a9d8b-a698-450b-82ab-e4ac2b0569a3" width="70%">
 
