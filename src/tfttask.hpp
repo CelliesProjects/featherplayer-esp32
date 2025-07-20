@@ -2,12 +2,8 @@
 #define _TFTTASK_HPP_
 
 #include <WiFi.h>
-#include <Adafruit_GFX.h>
-#include <Adafruit_ST7789.h>
-#include <Fonts/FreeSansBold9pt7b.h>
-#include <Fonts/FreeSansBold18pt7b.h>
-#include <Fonts/FreeSansBold24pt7b.h>
 
+#include "LGFX_AdaFruitTFT.hpp"
 #include "ScopedMutex.h"
 #include "tftMessage_t.h"
 
