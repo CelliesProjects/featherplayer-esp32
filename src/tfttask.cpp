@@ -203,9 +203,13 @@ void tftTask(void *parameter)
             }
         }
 
-        static time_t lastClockUpdate = 0;
+        time_t t;
+        time(&t);
+        struct tm *timeinfo = localtime(&t);
+        char buff[CLOCKSTR_LEN];
+        strftime(buff, sizeof(buff), "%R", timeinfo);
 
-        if (showClock && lastClockUpdate != time(NULL))
+        if (showClock && !strstr(previousTime, buff))
         {
             static LGFX_Sprite clock(&tft);
             if (!clock.getBuffer() && !clock.createSprite(tft.width(), TOP_OF_SCROLLER))
@@ -218,14 +222,7 @@ void tftTask(void *parameter)
             clock.setFont(&FreeSansBold24pt7b);
             clock.setTextSize(2);
             clock.fillScreen(BACKGROUND_COLOR);
-
-            time_t t;
-            time(&t);
-            struct tm *timeinfo = localtime(&t);
-            char buff[12];
-            strftime(buff, sizeof(buff), "%R", timeinfo);
-
-            uint16_t width = clock.textWidth(buff);
+            const uint16_t width = clock.textWidth(buff);
 
             clock.setTextColor(TEXT_COLOR);
             clock.setCursor((clock.width() / 2) - (width / 2) - 5, 0);
@@ -238,7 +235,7 @@ void tftTask(void *parameter)
                 ScopedMutex lock(spiMutex);
                 clock.pushSprite(0, 0);
             }
-            lastClockUpdate = time(NULL);
+            snprintf(previousTime, sizeof(previousTime), "%s", buff);
         }
 
         if (streamTitle[0] || clearTitle)

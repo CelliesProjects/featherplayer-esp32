@@ -11,6 +11,7 @@ void sendPlayerMessage(playerMessage::Type type, uint8_t value = 0, size_t offse
 
 void playListEnd()
 {
+    previousTime[0] = 0;
     playList.setCurrentItem(PLAYLIST_STOPPED);
 
     sendTftMessage(tftMessage::SHOW_IPADDRESS);
