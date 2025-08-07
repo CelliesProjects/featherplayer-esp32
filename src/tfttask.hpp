@@ -9,6 +9,8 @@
 
 extern const char *PROGRAM_NAME;
 extern SemaphoreHandle_t spiMutex;
+
 QueueHandle_t tftQueue = NULL;
+char previousTime[CLOCKSTR_LEN] = "";
 
 #endif

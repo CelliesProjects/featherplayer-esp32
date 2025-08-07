@@ -26,5 +26,6 @@ extern void sendTftMessage(tftMessage::Type type, const char *str = NULL, size_t
 
 extern SemaphoreHandle_t spiMutex;
 extern size_t _savedPosition;
+extern char previousTime[CLOCKSTR_LEN];
 
 #endif
