@@ -15,7 +15,8 @@
 
 const char *PROGRAM_NAME = "featherplayer-esp32";
 
-SemaphoreHandle_t spiMutex = NULL; // SPI bus is shared between playertask -VS1053- and tfttask -ST7789-
+SemaphoreHandle_t spiMutex = nullptr; // SPI bus is shared between playertask -VS1053- and tfttask -ST7789-
+TaskHandle_t playerTaskHandle = nullptr;
 
 extern playList_t playList;
 
@@ -215,8 +216,8 @@ void setup()
         "playerTask",
         1024 * 5,
         NULL,
-        tskIDLE_PRIORITY + 5,
-        NULL);
+        tskIDLE_PRIORITY + 3,
+        &playerTaskHandle);
 
     if (taskResult != pdPASS)
     {
