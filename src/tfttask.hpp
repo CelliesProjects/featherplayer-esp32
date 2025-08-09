@@ -9,6 +9,7 @@
 
 extern const char *PROGRAM_NAME;
 extern SemaphoreHandle_t spiMutex;
+extern TaskHandle_t playerTaskHandle;
 
 QueueHandle_t tftQueue = NULL;
 char previousTime[CLOCKSTR_LEN] = "";

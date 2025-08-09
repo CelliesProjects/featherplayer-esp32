@@ -25,7 +25,6 @@ void tftTask(void *parameter)
     // turn on the TFT / I2C power supply https://learn.adafruit.com/esp32-s3-reverse-tft-feather/pinouts#tft-display-3138945
     pinMode(TFT_I2C_POWER, OUTPUT);
     digitalWrite(TFT_I2C_POWER, HIGH);
-    delay(5);
 
     static const auto BACKGROUND_COLOR = 0xa0e0; // RGB888 value = #a61d04
     static const auto TEXT_COLOR = 0xf79b;       // RGB888 value = #f5f4e2 yellowish
@@ -77,6 +76,8 @@ void tftTask(void *parameter)
                     ScopedMutex lock(spiMutex);
                     canvas.pushSprite(0, 0);
                 }
+                if (playerTaskHandle)
+                    xTaskNotifyGive(playerTaskHandle);
                 break;
 
             case tftMessage::PROGRESS_BAR:
@@ -111,6 +112,8 @@ void tftTask(void *parameter)
                     ScopedMutex lock(spiMutex);
                     canvas.pushSprite(0, 0);
                 }
+                if (playerTaskHandle)
+                    xTaskNotifyGive(playerTaskHandle);
 
                 break;
             case tftMessage::SHOW_TITLE:
