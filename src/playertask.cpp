@@ -57,6 +57,7 @@ static void startItem(ESP32_VS1053_Stream &audio, playerMessage &msg)
             sendTftMessage(tftMessage::SHOW_TITLE, "");
             sendTftMessage(tftMessage::CLEAR_SCREEN);
             sendTftMessage(tftMessage::SHOW_STATION, playList.name(playList.currentItem()).c_str());
+            sendTftMessage(tftMessage::SHOW_LOADING);
             sendServerMessage(serverMessage::WS_UPDATE_NOWPLAYING);
             sendServerMessage(serverMessage::WS_UPDATE_STREAMTITLE);
             sendServerMessage(serverMessage::WS_UPDATE_STATION, playList.name(playList.currentItem()).c_str());
@@ -80,6 +81,7 @@ static void startItem(ESP32_VS1053_Stream &audio, playerMessage &msg)
 
     if (audio.isRunning())
     {
+        sendTftMessage(tftMessage::CLEAR_SCREEN);
         char buff[32];
         if (audio.bitrate())
             snprintf(buff, sizeof(buff), "%s %lu kbps", audio.currentCodec(), audio.bitrate());

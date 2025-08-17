@@ -15,6 +15,7 @@ struct tftMessage
         SHOW_CODEC,
         SHOW_IPADDRESS,
         SHOW_CLOCK,
+        SHOW_LOADING,
         BUFFER_STATUS
     };
     Type type;
