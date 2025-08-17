@@ -25,7 +25,6 @@ void tftTask(void *parameter)
     // turn on the TFT / I2C power supply https://learn.adafruit.com/esp32-s3-reverse-tft-feather/pinouts#tft-display-3138945
     pinMode(TFT_I2C_POWER, OUTPUT);
     digitalWrite(TFT_I2C_POWER, HIGH);
-    delay(5);
 
     static const auto BACKGROUND_COLOR = 0xa0e0; // RGB888 value = #a61d04
     static const auto TEXT_COLOR = 0xf79b;       // RGB888 value = #f5f4e2 yellowish
@@ -42,20 +41,36 @@ void tftTask(void *parameter)
         tft.setBrightness(35);
     }
 
+    static constexpr int CANVAS_HEIGHT = 20;
+
     static LGFX_Sprite canvas(&tft);
-    if (!canvas.getBuffer() && !canvas.createSprite(tft.width(), 20))
+    if (!canvas.getBuffer() && !canvas.createSprite(tft.width(), CANVAS_HEIGHT))
     {
         log_e("could not allocate canvas for station-name and scroller. system halted");
         while (1)
             delay(100);
     }
 
+    static const auto TOP_OF_SCROLLER = 76;
+
+    static LGFX_Sprite loader(&tft);
+    if (!loader.getBuffer() && !loader.createSprite(tft.width(), TOP_OF_SCROLLER - CANVAS_HEIGHT))
+    {
+        log_e("could not allocate loader sprite. system halted.");
+        while (1)
+            delay(100);
+    }
+
+    static constexpr auto font = &DejaVu24;
+    loader.fillScreen(BACKGROUND_COLOR);
+    loader.setTextColor(lgfx::color565(255, 255, 255), BACKGROUND_COLOR);
+    loader.drawCenterString("opening stream", loader.width() / 2, (loader.height() / 2) - font->yAdvance / 2, font);
+
     static uint16_t strWidth;
 
     static char streamTitle[264];
     static int16_t streamTitleOffset = 0;
 
-    static const auto TOP_OF_SCROLLER = 76;
     static bool showClock = false;
 
     while (1)
@@ -77,6 +92,8 @@ void tftTask(void *parameter)
                     ScopedMutex lock(spiMutex);
                     canvas.pushSprite(0, 0);
                 }
+                if (playerTaskHandle)
+                    xTaskNotifyGive(playerTaskHandle);
                 break;
 
             case tftMessage::PROGRESS_BAR:
@@ -111,7 +128,6 @@ void tftTask(void *parameter)
                     ScopedMutex lock(spiMutex);
                     canvas.pushSprite(0, 0);
                 }
-
                 break;
             case tftMessage::SHOW_TITLE:
                 if (!strcmp(streamTitle, msg.str))
@@ -195,6 +211,16 @@ void tftTask(void *parameter)
                     tft.fillRect(X_OFFSET, HEIGHT_OFFSET, FILLED_AREA, BAR_HEIGHT, lgfx::color565(0, 255, 0));
                     tft.fillRect(X_OFFSET + FILLED_AREA, HEIGHT_OFFSET, BAR_WIDTH - FILLED_AREA, BAR_HEIGHT, lgfx::color565(255, 0, 0));
                 }
+                break;
+            }
+            case tftMessage::SHOW_LOADING:
+            {
+                {
+                    ScopedMutex lock(spiMutex);
+                    loader.pushSprite(0, canvas.fontHeight());
+                }
+                if (playerTaskHandle)
+                    xTaskNotifyGive(playerTaskHandle);
                 break;
             }
 

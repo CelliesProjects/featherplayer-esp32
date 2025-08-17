@@ -57,9 +57,11 @@ static void startItem(ESP32_VS1053_Stream &audio, playerMessage &msg)
             sendTftMessage(tftMessage::SHOW_TITLE, "");
             sendTftMessage(tftMessage::CLEAR_SCREEN);
             sendTftMessage(tftMessage::SHOW_STATION, playList.name(playList.currentItem()).c_str());
+            sendTftMessage(tftMessage::SHOW_LOADING);
             sendServerMessage(serverMessage::WS_UPDATE_NOWPLAYING);
             sendServerMessage(serverMessage::WS_UPDATE_STREAMTITLE);
             sendServerMessage(serverMessage::WS_UPDATE_STATION, playList.name(playList.currentItem()).c_str());
+            ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
         }
 
         bool success = false;
@@ -75,12 +77,11 @@ static void startItem(ESP32_VS1053_Stream &audio, playerMessage &msg)
 
         msg.offset = 0; // do not loop through the playlist with an offset
         playList.setCurrentItem(playList.currentItem() + 1);
-
-        sendTftMessage(tftMessage::CLEAR_SCREEN);
     }
 
     if (audio.isRunning())
     {
+        sendTftMessage(tftMessage::CLEAR_SCREEN);
         char buff[32];
         if (audio.bitrate())
             snprintf(buff, sizeof(buff), "%s %lu kbps", audio.currentCodec(), audio.bitrate());
@@ -96,7 +97,7 @@ void playerTask(void *parameter)
 {
     sendTftMessage(tftMessage::SYSTEM_MESSAGE, "Starting codec...");
 
-    delay(2);
+    ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 
     static ESP32_VS1053_Stream audio;
 
