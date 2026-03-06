@@ -1,13 +1,14 @@
 #include "servertask.hpp"
 
-static constexpr char *TEXT_HTML = "text/html";
-static constexpr char *TEXT_PLAIN = "text/plain";
+//static constexpr const char *TEXT_HTML = "text/html";
+//static constexpr const char *TEXT_PLAIN = "text/plain";
 
-static constexpr char *CONTENT_ENCODING = "Content-Encoding";
-static constexpr char *GZIP = "gzip";
+//static constexpr const char *CONTENT_ENCODING = "Content-Encoding";
+//static constexpr const char *GZIP = "gzip";
+//static constexpr const char *MIMETYPE_PLAIN{"text/plain"};
 
-static constexpr char *IF_MODIFIED_SINCE = "If-Modified-Since";
-static constexpr char *IF_NONE_MATCH = "If-None-Match";
+static constexpr const char *IF_MODIFIED_SINCE = "If-Modified-Since";
+static constexpr const char *IF_NONE_MATCH = "If-None-Match";
 
 static char contentCreationTime[30];
 static char etagValue[16];
@@ -240,15 +241,14 @@ static void webserverUrlSetup()
     generateETag(contentCreationTime);
 
     constexpr const char *MIMETYPE_HTML{"text/html"};
-    constexpr const char *MIMETYPE_PLAIN{"text/plain"};
     constexpr const char *HEADER_CONTENT_ENCODING{"Content-Encoding"};
     constexpr const char *CONTENT_ENCODING_GZIP{"gzip"};
 
     server.on(
-        "/", [](PsychicRequest *request)
+        "/", [](PsychicRequest* request, PsychicResponse* resp)
         {
             if (samePageIsCached(request))
-                return request->reply(304);
+                return resp->send(304);
 
             extern const uint8_t index_start[] asm("_binary_src_webui_index_html_gz_start");
             extern const uint8_t index_end[] asm("_binary_src_webui_index_html_gz_end");                
@@ -262,10 +262,10 @@ static void webserverUrlSetup()
             return response.send(); });
 
     server.on(
-        "/scripturl", [](PsychicRequest *request)
+        "/scripturl", [](PsychicRequest* request, PsychicResponse* resp)
         {
             if (samePageIsCached(request))
-                return request->reply(304);
+                return resp->send(304);
 
             String content = SCRIPT_URL;
             content.concat("\n");
@@ -282,10 +282,10 @@ static void webserverUrlSetup()
             return response.send(); });
 
     server.on(
-        "/stations", [](PsychicRequest *request)
+        "/stations", [](PsychicRequest* request, PsychicResponse* resp)
         {
             if (samePageIsCached(request))
-                return request->reply(304);
+                return resp->send(304);
 
             String content;
             int i = 0;
@@ -300,25 +300,29 @@ static void webserverUrlSetup()
             return response.send(); });
 
     server.on(
-        "/favorites", [](PsychicRequest *request)
-        { return request->reply(favoritesToCStruct().c_str()); });
+        "/favorites", [](PsychicRequest* request, PsychicResponse* resp)
+        { return resp->send(favoritesToCStruct().c_str()); });
 
 #if defined(CORE_DEBUG_LEVEL) && (CORE_DEBUG_LEVEL >= 4)
+
+
+
+
     server.on(
-        "/api/taskstats", HTTP_GET, [](PsychicRequest *request)
+        "/api/taskstats", HTTP_GET, [](PsychicRequest* request, PsychicResponse* resp)
         {
             uint32_t totalRunTime;
             UBaseType_t taskCount = uxTaskGetNumberOfTasks();
 
             TaskStatus_t *pxTaskStatusArray = (TaskStatus_t *)heap_caps_malloc(taskCount * sizeof(TaskStatus_t), MALLOC_CAP_INTERNAL);
             if (!pxTaskStatusArray) 
-                return request->reply(500, TEXT_PLAIN, "Memory allocation failed");
+                return resp->send(500, TEXT_PLAIN, "Memory allocation failed");
 
             UBaseType_t retrievedTasks = uxTaskGetSystemState(pxTaskStatusArray, taskCount, &totalRunTime);
             if (totalRunTime == 0 || retrievedTasks == 0) 
             {
                 heap_caps_free(pxTaskStatusArray);
-                return request->reply(500, TEXT_PLAIN, "Failed to get task stats");
+                return resp->send(500, TEXT_PLAIN, "Failed to get task stats");
             }
 
             String csvResponse = "Name,State,Priority,Min Stack Left,Runtime,CPU%\n";
@@ -339,15 +343,15 @@ static void webserverUrlSetup()
 
             heap_caps_free(pxTaskStatusArray);
 
-            return request->reply(200, MIMETYPE_PLAIN, csvResponse.c_str()); }
+            return resp->send(200, MIMETYPE_PLAIN, csvResponse.c_str()); }
 
     );
 
     server.on(
-        "/stats", HTTP_GET, [](PsychicRequest *request)
+        "/stats", HTTP_GET, [](PsychicRequest* request, PsychicResponse* resp)
         {
             if (samePageIsCached(request))
-                return request->reply(304);
+                return resp->send(304);
 
             extern const uint8_t stats_start[] asm("_binary_src_webui_stats_html_gz_start");
             extern const uint8_t stats_end[] asm("_binary_src_webui_stats_html_gz_end");   
@@ -368,10 +372,10 @@ static void webserverUrlSetup()
     auto createIconURL = [](const char *uri, const char *icon)
     {
         server.on(
-            uri, [icon](PsychicRequest *request)
+            uri, [icon](PsychicRequest* request, PsychicResponse* resp)
             {
                 if (samePageIsCached(request))
-                    return request->reply(304);
+                    return resp->send(304);
 
                 PsychicResponse response = PsychicResponse(request);
                 addStaticContentHeaders(response);
@@ -394,10 +398,10 @@ static void webserverUrlSetup()
     createIconURL("/nosslicon.svg", nosslicon);
 
     server.onNotFound(
-        [](PsychicRequest *request)
+        [](PsychicRequest* request, PsychicResponse* resp)
         {
             log_e("404 - Not found: 'http://%s%s'", request->host().c_str(), request->url().c_str());
-            return request->reply(404, MIMETYPE_HTML, "<h1>Aaaw please dont cry</h1>This is a 404 page<br>You reached the end of the road...<br>The page you are looking for is gone"); });
+            return resp->send(404, MIMETYPE_HTML, "<h1>Aaaw please dont cry</h1>This is a 404 page<br>You reached the end of the road...<br>The page you are looking for is gone"); });
 
     DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
 }
@@ -714,13 +718,15 @@ void serverTask(void *parameter)
     server.config.max_uri_handlers = 20;
     server.config.max_open_sockets = 10;
 
-    server.listen(80);
+    //server.listen(80);
     webserverUrlSetup();
 
     websocketHandler.onOpen(wsNewClientHandler);
     websocketHandler.onFrame(wsFrameHandler);
 
     server.on("/ws", &websocketHandler);
+
+    server.begin();
 
     while (1)
     {
