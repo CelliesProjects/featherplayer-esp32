@@ -64,7 +64,7 @@ void tftTask(void *parameter)
     static constexpr auto font = &DejaVu24;
     loader.fillScreen(BACKGROUND_COLOR);
     loader.setTextColor(lgfx::color565(255, 255, 255), BACKGROUND_COLOR);
-    loader.drawCenterString("opening stream", loader.width() / 2, (loader.height() / 2) - font->yAdvance / 2, font);
+    loader.drawCenterString("connecting...", loader.width() / 2, 2, font);
 
     static uint16_t strWidth;
 

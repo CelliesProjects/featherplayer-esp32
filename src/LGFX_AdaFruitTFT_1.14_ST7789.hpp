@@ -1,6 +1,8 @@
 #pragma once
 #include <LovyanGFX.hpp>
 
+// Adafruit driver -> https://github.com/adafruit/Adafruit-ST7735-Library/blob/master/Adafruit_ST7789.cpp
+
 class LGFX : public lgfx::LGFX_Device
 {
 public:
@@ -16,9 +18,17 @@ public:
         cfg.memory_height = 240;
         cfg.panel_width = 135;
         cfg.panel_height = 240;
+
+        // upside down orientation -> thuis speler
+        // cfg.offset_x = 52;
+        // cfg.offset_y = 40;
+        // cfg.offset_rotation = 0;
+
+        // normal orientation -> auto speler
         cfg.offset_x = 52;
-        cfg.offset_y = 40;
-        cfg.offset_rotation = 0;
+        cfg.offset_y = -40;
+        cfg.offset_rotation = 2;
+
         cfg.dummy_read_pixel = 8;
         cfg.dummy_read_bits = 1;
         cfg.readable = false;
@@ -32,7 +42,7 @@ public:
         auto buscfg = _bus_instance.config();
         buscfg.spi_host = SPI2_HOST;
         buscfg.spi_mode = 0;
-        buscfg.freq_write = 40000000;
+        buscfg.freq_write = 80000000;
         buscfg.freq_read = 16000000;
         buscfg.spi_3wire = false;
         buscfg.use_lock = true;
