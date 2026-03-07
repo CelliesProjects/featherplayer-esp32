@@ -225,7 +225,7 @@ static bool saveItemToFavorites(PsychicWebSocketClient *client, const char *file
     }
 }
 
-void webserverUrlSetup()
+static void webserverUrlSetup()
 {
     const time_t rawTime = time(NULL);
     struct tm *timeinfo = gmtime(&rawTime);
