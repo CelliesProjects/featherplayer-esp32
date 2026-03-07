@@ -3,7 +3,7 @@
 
 #include <WiFi.h>
 
-#include "LGFX_AdaFruitTFT.hpp"
+#include "LGFX_AdaFruitTFT_1.14_ST7789.hpp"
 #include "ScopedMutex.h"
 #include "tftMessage_t.h"
 
