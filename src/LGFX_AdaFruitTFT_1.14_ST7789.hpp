@@ -19,12 +19,12 @@ public:
         cfg.panel_width = 135;
         cfg.panel_height = 240;
 
-        // upside down orientation -> home
+        // upside down orientation -> thuis speler
         // cfg.offset_x = 52;
         // cfg.offset_y = 40;
         // cfg.offset_rotation = 0;
 
-        // normal orientation -> car
+        // normal orientation -> auto speler
         cfg.offset_x = 52;
         cfg.offset_y = -40;
         cfg.offset_rotation = 2;
