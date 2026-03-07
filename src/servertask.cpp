@@ -1,11 +1,5 @@
 #include "servertask.hpp"
 
-static constexpr const char *TEXT_HTML = "text/html";
-static constexpr const char *TEXT_PLAIN = "text/plain";
-
-static constexpr const char *CONTENT_ENCODING = "Content-Encoding";
-static constexpr const char *ENCODING_GZIP = "gzip";
-
 static char contentCreationTime[30];
 static char etagValue[16];
 
@@ -239,6 +233,10 @@ void webserverUrlSetup()
 
     generateETag(contentCreationTime);
 
+    static constexpr const char *TEXT_HTML = "text/html";
+    static constexpr const char *CONTENT_ENCODING = "Content-Encoding";
+    static constexpr const char *ENCODING_GZIP = "gzip";
+
     server.on(
         "/", [](PsychicRequest *request, PsychicResponse *resp)
         {
@@ -299,6 +297,8 @@ void webserverUrlSetup()
         { return resp->send(favoritesToCStruct().c_str()); });
 
 #if defined(CORE_DEBUG_LEVEL) && (CORE_DEBUG_LEVEL >= 4)
+
+    static constexpr const char *TEXT_PLAIN = "text/plain";
 
     server.on(
         "/api/taskstats", HTTP_GET, [](PsychicRequest *request, PsychicResponse *resp)
