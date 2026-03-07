@@ -15,7 +15,7 @@ const struct source preset[]{
     {"NPO Klassiek", "http://icecast.omroep.nl/radio4-bb-mp3"},
     {"NPO Radio5", "http://icecast.omroep.nl/radio5-bb-mp3"},
     {"Absoluut FM", "http://absoluutfm.stream.laut.fm/absoluutfm"},
-    {"Amsterdam Funk Channel", "http://stream.afc.fm:8504/stream"},
+    {"Amsterdam Funk Channel", "https://live.afc.fm"},
     {"Radio Gelderland", "http://d2od87akyl46nm.cloudfront.net/icecast/omroepgelderland/radiogelderland"},
     {"Sublime Soul", "http://22673.live.streamtheworld.com/WEB22_MP3_SC?dist=SUBLIME_WEBSITE"},
     {"Sublime Jazz", "http://22673.live.streamtheworld.com/WEB20_MP3_SC?dist=SUBLIME_WEBSITE"},
