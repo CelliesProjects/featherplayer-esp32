@@ -1,20 +1,19 @@
 #include "servertask.hpp"
 
-//static constexpr const char *TEXT_HTML = "text/html";
-//static constexpr const char *TEXT_PLAIN = "text/plain";
+static constexpr const char *TEXT_HTML = "text/html";
+static constexpr const char *TEXT_PLAIN = "text/plain";
 
-//static constexpr const char *CONTENT_ENCODING = "Content-Encoding";
-//static constexpr const char *GZIP = "gzip";
-//static constexpr const char *MIMETYPE_PLAIN{"text/plain"};
-
-static constexpr const char *IF_MODIFIED_SINCE = "If-Modified-Since";
-static constexpr const char *IF_NONE_MATCH = "If-None-Match";
+static constexpr const char *CONTENT_ENCODING = "Content-Encoding";
+static constexpr const char *ENCODING_GZIP = "gzip";
 
 static char contentCreationTime[30];
 static char etagValue[16];
 
 static inline bool samePageIsCached(PsychicRequest *request)
 {
+    static constexpr const char *IF_MODIFIED_SINCE = "If-Modified-Since";
+    static constexpr const char *IF_NONE_MATCH = "If-None-Match";
+
     bool modifiedSince = request->hasHeader(IF_MODIFIED_SINCE) && request->header(IF_MODIFIED_SINCE).equals(contentCreationTime);
     bool noneMatch = request->hasHeader(IF_NONE_MATCH) && request->header(IF_NONE_MATCH).equals(etagValue);
 
@@ -232,7 +231,7 @@ static bool saveItemToFavorites(PsychicWebSocketClient *client, const char *file
     }
 }
 
-static void webserverUrlSetup()
+void webserverUrlSetup()
 {
     const time_t rawTime = time(NULL);
     struct tm *timeinfo = gmtime(&rawTime);
@@ -240,12 +239,8 @@ static void webserverUrlSetup()
 
     generateETag(contentCreationTime);
 
-    constexpr const char *MIMETYPE_HTML{"text/html"};
-    constexpr const char *HEADER_CONTENT_ENCODING{"Content-Encoding"};
-    constexpr const char *CONTENT_ENCODING_GZIP{"gzip"};
-
     server.on(
-        "/", [](PsychicRequest* request, PsychicResponse* resp)
+        "/", [](PsychicRequest *request, PsychicResponse *resp)
         {
             if (samePageIsCached(request))
                 return resp->send(304);
@@ -255,14 +250,14 @@ static void webserverUrlSetup()
 
             PsychicResponse response = PsychicResponse(request);
             addStaticContentHeaders(response);
-            response.addHeader(HEADER_CONTENT_ENCODING, CONTENT_ENCODING_GZIP);
-            response.setContentType(MIMETYPE_HTML);
+            response.addHeader(CONTENT_ENCODING, ENCODING_GZIP);
+            response.setContentType(TEXT_HTML);
             const size_t size = index_end - index_start;
             response.setContent(index_start, size);
             return response.send(); });
 
     server.on(
-        "/scripturl", [](PsychicRequest* request, PsychicResponse* resp)
+        "/scripturl", [](PsychicRequest *request, PsychicResponse *resp)
         {
             if (samePageIsCached(request))
                 return resp->send(304);
@@ -282,7 +277,7 @@ static void webserverUrlSetup()
             return response.send(); });
 
     server.on(
-        "/stations", [](PsychicRequest* request, PsychicResponse* resp)
+        "/stations", [](PsychicRequest *request, PsychicResponse *resp)
         {
             if (samePageIsCached(request))
                 return resp->send(304);
@@ -300,16 +295,13 @@ static void webserverUrlSetup()
             return response.send(); });
 
     server.on(
-        "/favorites", [](PsychicRequest* request, PsychicResponse* resp)
+        "/favorites", [](PsychicRequest *request, PsychicResponse *resp)
         { return resp->send(favoritesToCStruct().c_str()); });
 
 #if defined(CORE_DEBUG_LEVEL) && (CORE_DEBUG_LEVEL >= 4)
 
-
-
-
     server.on(
-        "/api/taskstats", HTTP_GET, [](PsychicRequest* request, PsychicResponse* resp)
+        "/api/taskstats", HTTP_GET, [](PsychicRequest *request, PsychicResponse *resp)
         {
             uint32_t totalRunTime;
             UBaseType_t taskCount = uxTaskGetNumberOfTasks();
@@ -343,12 +335,12 @@ static void webserverUrlSetup()
 
             heap_caps_free(pxTaskStatusArray);
 
-            return resp->send(200, MIMETYPE_PLAIN, csvResponse.c_str()); }
+            return resp->send(200, TEXT_PLAIN, csvResponse.c_str()); }
 
     );
 
     server.on(
-        "/stats", HTTP_GET, [](PsychicRequest* request, PsychicResponse* resp)
+        "/stats", HTTP_GET, [](PsychicRequest *request, PsychicResponse *resp)
         {
             if (samePageIsCached(request))
                 return resp->send(304);
@@ -358,7 +350,7 @@ static void webserverUrlSetup()
 
             PsychicResponse response = PsychicResponse(request);
             addStaticContentHeaders(response);
-            response.addHeader(CONTENT_ENCODING, GZIP);
+            response.addHeader(CONTENT_ENCODING, ENCODING_GZIP);
             response.setContentType(TEXT_HTML);
             const size_t size =(stats_end - stats_start);
             response.setContent(stats_start, size);
@@ -367,19 +359,17 @@ static void webserverUrlSetup()
     );
 #endif
 
-    constexpr const char *MIMETYPE_SVG{"image/svg+xml"};
-
     auto createIconURL = [](const char *uri, const char *icon)
     {
         server.on(
-            uri, [icon](PsychicRequest* request, PsychicResponse* resp)
+            uri, [icon](PsychicRequest *request, PsychicResponse *resp)
             {
                 if (samePageIsCached(request))
                     return resp->send(304);
 
                 PsychicResponse response = PsychicResponse(request);
                 addStaticContentHeaders(response);
-                response.setContentType(MIMETYPE_SVG);
+                response.setContentType("image/svg+xml");
                 response.setContent(icon);
                 return response.send(); });
     };
@@ -398,10 +388,10 @@ static void webserverUrlSetup()
     createIconURL("/nosslicon.svg", nosslicon);
 
     server.onNotFound(
-        [](PsychicRequest* request, PsychicResponse* resp)
+        [](PsychicRequest *request, PsychicResponse *resp)
         {
             log_e("404 - Not found: 'http://%s%s'", request->host().c_str(), request->url().c_str());
-            return resp->send(404, MIMETYPE_HTML, "<h1>Aaaw please dont cry</h1>This is a 404 page<br>You reached the end of the road...<br>The page you are looking for is gone"); });
+            return resp->send(404, TEXT_HTML, "<h1>404 Page not found!</h1><br>The page you are looking for is gone"); });
 
     DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
 }
@@ -718,7 +708,6 @@ void serverTask(void *parameter)
     server.config.max_uri_handlers = 20;
     server.config.max_open_sockets = 10;
 
-    //server.listen(80);
     webserverUrlSetup();
 
     websocketHandler.onOpen(wsNewClientHandler);
