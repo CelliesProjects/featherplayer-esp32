@@ -26,8 +26,8 @@ void tftTask(void *parameter)
     pinMode(TFT_I2C_POWER, OUTPUT);
     digitalWrite(TFT_I2C_POWER, HIGH);
 
-    static const auto BACKGROUND_COLOR = 0xa0e0; // RGB888 value = #a61d04
-    static const auto TEXT_COLOR = 0xf79b;       // RGB888 value = #f5f4e2 yellowish
+    static const uint16_t BACKGROUND_COLOR = lgfx::color565(29, 29, 29);
+    static const uint16_t TEXT_COLOR = lgfx::color565(245, 244, 226);
 
     static LGFX tft;
 
