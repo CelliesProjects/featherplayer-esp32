@@ -26,8 +26,8 @@ void tftTask(void *parameter)
     pinMode(TFT_I2C_POWER, OUTPUT);
     digitalWrite(TFT_I2C_POWER, HIGH);
 
-    static const auto BACKGROUND_COLOR = 0xa0e0; // RGB888 value = #a61d04
-    static const auto TEXT_COLOR = 0xf79b;       // RGB888 value = #f5f4e2 yellowish
+    static const uint16_t BACKGROUND_COLOR = lgfx::color565(29, 29, 29);
+    static const uint16_t TEXT_COLOR = lgfx::color565(245, 244, 226);
 
     static LGFX tft;
 
@@ -129,6 +129,7 @@ void tftTask(void *parameter)
                     canvas.pushSprite(0, 0);
                 }
                 break;
+
             case tftMessage::SHOW_TITLE:
                 if (!strcmp(streamTitle, msg.str))
                     break;
@@ -145,24 +146,57 @@ void tftTask(void *parameter)
                 tft.setFont(&FreeSansBold9pt7b);
                 strWidth = tft.textWidth(streamTitle);
                 break;
-            case tftMessage::SHOW_CODEC:
-                tft.setTextSize(1);
-                tft.setTextColor(TEXT_COLOR);
-                tft.setFont(&FreeSansBold9pt7b);
-                tft.setCursor(5, 55);
+
+            case tftMessage::SHOW_BITRATE:
+            {
+                constexpr int16_t spriteWidth = 60;
+                constexpr int16_t spriteHeight = 20;
+                const auto font = &DejaVu18;
+
+                static LGFX_Sprite bitrate(&tft);
+                if (!bitrate.getBuffer() && !bitrate.createSprite(spriteWidth, spriteHeight))
+                {
+                    log_e("could not allocate canvas for bitrate. system halted");
+                    while (1)
+                        delay(100);
+                }
+                bitrate.clear();
+                bitrate.setTextDatum(CC_DATUM);
+                char br[8];
+                snprintf(br, sizeof(br), "%zu", msg.value1);
+                bitrate.drawCenterString(br, spriteWidth / 2, (spriteHeight / 2) - (font->yAdvance / 2), font);
                 {
                     ScopedMutex lock(spiMutex);
-                    tft.print(msg.str);
+                    bitrate.pushSprite(70, 50);
                 }
-                tft.setFont(0);
-                tft.setTextSize(1);
-                tft.setCursor(152, 53);
-                {
-                    ScopedMutex lock(spiMutex);
-                    tft.print("buffer status");
-                    tft.drawRect(148, 50, 85, 24, TEXT_COLOR);
-                }
+
                 break;
+            }
+
+            case tftMessage::SHOW_CODEC:
+            {
+                constexpr int16_t spriteWidth = 60;
+                constexpr int16_t spriteHeight = 20;
+                const auto font = &DejaVu18;
+
+                static LGFX_Sprite codec(&tft);
+                if (!codec.getBuffer() && !codec.createSprite(spriteWidth, spriteHeight))
+                {
+                    log_e("could not allocate canvas for codec. system halted");
+                    while (1)
+                        delay(100);
+                }
+                codec.clear();
+                codec.setTextDatum(CC_DATUM);
+                codec.drawCenterString(msg.str, spriteWidth / 2, (spriteHeight / 2) - (font->yAdvance / 2), font);
+                {
+                    ScopedMutex lock(spiMutex);
+                    codec.pushSprite(5, 50);
+                }
+
+                break;
+            }
+
             case tftMessage::SHOW_IPADDRESS:
             {
                 constexpr int16_t spriteHeight = 40;
@@ -201,18 +235,27 @@ void tftTask(void *parameter)
 
             case tftMessage::BUFFER_STATUS:
             {
-                const int X_OFFSET = 150;
-                const int HEIGHT_OFFSET = 63;
-                const int BAR_WIDTH = 80;
-                const int BAR_HEIGHT = 7;
-                const int16_t FILLED_AREA = map_range(msg.value1, 0, msg.value2, 0, BAR_WIDTH);
+                constexpr int16_t spriteWidth = 100;
+                constexpr int16_t spriteHeight = 20;
+
+                static LGFX_Sprite bufferStatus(&tft);
+                if (!bufferStatus.getBuffer() && !bufferStatus.createSprite(spriteWidth, spriteHeight))
+                {
+                    log_e("could not allocate canvas for buffer status. system halted");
+                    while (1)
+                        delay(100);
+                }
+
+                const int16_t FILLED_AREA = map_range(msg.value1, 0, msg.value2, 0, spriteWidth);
+                bufferStatus.fillRect(0, 0, FILLED_AREA, spriteHeight, lgfx::color565(0, 255, 0));
+                bufferStatus.fillRect(FILLED_AREA, 0, spriteWidth - FILLED_AREA, spriteHeight, lgfx::color565(255, 0, 0));
                 {
                     ScopedMutex lock(spiMutex);
-                    tft.fillRect(X_OFFSET, HEIGHT_OFFSET, FILLED_AREA, BAR_HEIGHT, lgfx::color565(0, 255, 0));
-                    tft.fillRect(X_OFFSET + FILLED_AREA, HEIGHT_OFFSET, BAR_WIDTH - FILLED_AREA, BAR_HEIGHT, lgfx::color565(255, 0, 0));
+                    bufferStatus.pushSprite(135, 50);
                 }
                 break;
             }
+
             case tftMessage::SHOW_LOADING:
             {
                 {
