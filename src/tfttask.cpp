@@ -163,7 +163,7 @@ void tftTask(void *parameter)
                 bitrate.clear();
                 bitrate.setTextDatum(CC_DATUM);
                 char br[8];
-                snprintf(br, sizeof(br), "%i", msg.value1);
+                snprintf(br, sizeof(br), "%lu", msg.value1);
                 bitrate.drawCenterString(br, spriteWidth / 2, (spriteHeight / 2) - (font->yAdvance / 2), font);
                 {
                     ScopedMutex lock(spiMutex);
@@ -255,7 +255,7 @@ void tftTask(void *parameter)
                 }
                 break;
             }
-            
+
             case tftMessage::SHOW_LOADING:
             {
                 {
