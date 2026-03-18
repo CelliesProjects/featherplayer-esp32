@@ -245,19 +245,3 @@ void setup()
 }
 
 void loop() {}
-
-void audio_eof_stream(const char *info)
-{
-    sendPlayerMessage(playerMessage::START_ITEM, playList.currentItem() + 1);
-}
-
-void audio_showstreamtitle(const char *info)
-{
-    sendServerMessage(serverMessage::WS_UPDATE_STREAMTITLE, info);
-    sendTftMessage(tftMessage::SHOW_TITLE, info);
-}
-
-void audio_showstation(const char *info)
-{
-    sendServerMessage(serverMessage::WS_UPDATE_STATION, info);
-}

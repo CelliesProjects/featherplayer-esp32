@@ -9,6 +9,32 @@ void sendPlayerMessage(playerMessage::Type type, uint8_t value = 0, size_t offse
     xQueueSend(playerQueue, &msg, portMAX_DELAY);
 }
 
+void codecCallBack(const char *codec)
+{
+    sendTftMessage(tftMessage::SHOW_CODEC, codec);
+}
+
+void bitrateCallback(uint32_t bitrate)
+{
+    sendTftMessage(tftMessage::SHOW_BITRATE, nullptr, bitrate);
+}
+
+void stationCallback(const char *name)
+{
+    sendServerMessage(serverMessage::WS_UPDATE_STATION, name);
+}
+
+void infoCallback(const char *info)
+{
+    sendServerMessage(serverMessage::WS_UPDATE_STREAMTITLE, info);
+    sendTftMessage(tftMessage::SHOW_TITLE, info);
+}
+
+void eofCallback(const char *info)
+{
+    sendPlayerMessage(playerMessage::START_ITEM, playList.currentItem() + 1);
+}
+
 void playListEnd()
 {
     previousTime[0] = 0;
@@ -31,7 +57,7 @@ static void startItem(ESP32_VS1053_Stream &audio, playerMessage &msg)
 {
     if (audio.isRunning())
     {
-        audio_showstreamtitle("");
+        infoCallback("");
         ScopedMutex lock(spiMutex);
         audio.stopSong();
     }
@@ -67,7 +93,7 @@ static void startItem(ESP32_VS1053_Stream &audio, playerMessage &msg)
         bool success = false;
         {
             ScopedMutex lock(spiMutex);
-            success = audio.connecttohost(playList.url(playList.currentItem()).c_str(), LIBRARY_USER, LIBRARY_PWD, msg.offset);
+            success = audio.connectToHost(playList.url(playList.currentItem()).c_str(), LIBRARY_USER, LIBRARY_PWD, msg.offset);
         }
 
         if (success)
@@ -82,12 +108,14 @@ static void startItem(ESP32_VS1053_Stream &audio, playerMessage &msg)
     if (audio.isRunning())
     {
         sendTftMessage(tftMessage::CLEAR_SCREEN);
+        /*
         char buff[32];
         if (audio.bitrate())
             snprintf(buff, sizeof(buff), "%s %lu kbps", audio.currentCodec(), audio.bitrate());
         else
             snprintf(buff, sizeof(buff), "%s", audio.currentCodec());
         sendTftMessage(tftMessage::SHOW_CODEC, buff);
+        */
     }
     else
         playListEnd();
@@ -111,6 +139,11 @@ void playerTask(void *parameter)
                 delay(100);
         }
     }
+    audio.setCodecCB(codecCallBack);
+    audio.setBitrateCB(bitrateCallback);   
+    audio.setStationCB(stationCallback);
+    audio.setInfoCB(infoCallback);
+    audio.setEofCB(eofCallback);    
 
     playListEnd(); // this puts the audio system in a known state
 
@@ -119,7 +152,7 @@ void playerTask(void *parameter)
     while (1)
     {
         static playerMessage msg;
-        if (xQueueReceive(playerQueue, &msg, pdMS_TO_TICKS(25)) == pdTRUE)
+        if (xQueueReceive(playerQueue, &msg, pdMS_TO_TICKS(10)) == pdTRUE)
         {
             switch (msg.type)
             {
