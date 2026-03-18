@@ -13,6 +13,7 @@ struct tftMessage
         SHOW_STATION,
         SHOW_TITLE,
         SHOW_CODEC,
+        SHOW_BITRATE,
         SHOW_IPADDRESS,
         SHOW_CLOCK,
         SHOW_LOADING,
