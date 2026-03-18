@@ -106,17 +106,7 @@ static void startItem(ESP32_VS1053_Stream &audio, playerMessage &msg)
     }
 
     if (audio.isRunning())
-    {
         sendTftMessage(tftMessage::CLEAR_SCREEN);
-        /*
-        char buff[32];
-        if (audio.bitrate())
-            snprintf(buff, sizeof(buff), "%s %lu kbps", audio.currentCodec(), audio.bitrate());
-        else
-            snprintf(buff, sizeof(buff), "%s", audio.currentCodec());
-        sendTftMessage(tftMessage::SHOW_CODEC, buff);
-        */
-    }
     else
         playListEnd();
 }
@@ -140,10 +130,10 @@ void playerTask(void *parameter)
         }
     }
     audio.setCodecCB(codecCallBack);
-    audio.setBitrateCB(bitrateCallback);   
+    audio.setBitrateCB(bitrateCallback);
     audio.setStationCB(stationCallback);
     audio.setInfoCB(infoCallback);
-    audio.setEofCB(eofCallback);    
+    audio.setEofCB(eofCallback);
 
     playListEnd(); // this puts the audio system in a known state
 
