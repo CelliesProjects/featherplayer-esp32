@@ -57,7 +57,7 @@ static void startItem(ESP32_VS1053_Stream &audio, playerMessage &msg)
 {
     if (audio.isRunning())
     {
-        infoCallback("");
+        infoCallback(" ");
         ScopedMutex lock(spiMutex);
         audio.stopSong();
     }

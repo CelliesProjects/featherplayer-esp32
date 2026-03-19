@@ -20,16 +20,173 @@ float map_range(const float input,
     return (input - input_start) * (output_range / input_range) + output_start;
 }
 
+void handleSysMess(tftMessage &msg)
+{
+    canvas.fillScreen(lgfx::color565(255, 0, 0));
+    canvas.setTextColor(lgfx::color565(255, 255, 255));
+    canvas.setFont(&FreeSansBold9pt7b);
+    canvas.setTextSize(1);
+    canvas.setCursor(4, canvas.height() - canvas.fontHeight());
+    canvas.print(msg.str);
+    {
+        ScopedMutex lock(spiMutex);
+        canvas.pushSprite(0, 0);
+    }
+    if (playerTaskHandle)
+        xTaskNotifyGive(playerTaskHandle);
+}
+
+void handleProgress(tftMessage &msg)
+{
+    const int HEIGHT_IN_PIXELS = 15;
+    const int HEIGHT_OFFSET = 28;
+    const int16_t FILLED_AREA = map_range(msg.value1, 0, msg.value2, 0, tft.width() + 1);
+
+    ScopedMutex lock(spiMutex);
+    tft.fillRect(0, HEIGHT_OFFSET, FILLED_AREA, HEIGHT_IN_PIXELS, lgfx::color565(0, 0, 255));
+    tft.fillRect(FILLED_AREA, HEIGHT_OFFSET, tft.width() - FILLED_AREA, HEIGHT_IN_PIXELS, lgfx::color565(255, 255, 255));
+}
+
+void handleStation(tftMessage &msg)
+{
+    canvas.fillScreen(0);
+    canvas.setFont(&FreeSansBold9pt7b);
+    canvas.setTextSize(1);
+    canvas.setCursor(4, canvas.height() - canvas.fontHeight());
+    canvas.print(msg.str);
+
+    ScopedMutex lock(spiMutex);
+    canvas.pushSprite(0, 0);
+}
+
+void handleTitle(tftMessage &msg)
+{
+    if (!strcmp(streamTitle, msg.str))
+        return;
+
+    if (msg.str[0] == 0)
+    {
+        clearTitle = true;
+        streamTitle[0] = 0;
+        return;
+    }
+    streamTitleOffset = 0;
+    snprintf(streamTitle, sizeof(streamTitle), "%s", msg.str);
+    tft.setTextSize(1);
+    tft.setFont(&FreeSansBold9pt7b);
+    streamTitleWidth = tft.textWidth(streamTitle);
+}
+
+void handleBitrate(tftMessage &msg)
+{
+    constexpr int16_t spriteWidth = 60;
+    constexpr int16_t spriteHeight = 20;
+    const auto font = &DejaVu18;
+
+    static LGFX_Sprite bitrate(&tft);
+    if (!bitrate.getBuffer() && !bitrate.createSprite(spriteWidth, spriteHeight))
+    {
+        log_e("could not allocate canvas for bitrate. system halted");
+        while (1)
+            delay(100);
+    }
+    bitrate.clear();
+    bitrate.setTextDatum(CC_DATUM);
+    char br[8];
+    snprintf(br, sizeof(br), "%zu", msg.value1);
+    bitrate.drawCenterString(br, spriteWidth / 2, (spriteHeight / 2) - (font->yAdvance / 2), font);
+
+    ScopedMutex lock(spiMutex);
+    bitrate.pushSprite(70, 50);
+}
+
+void handleCodec(tftMessage &msg)
+{
+    constexpr int16_t spriteWidth = 60;
+    constexpr int16_t spriteHeight = 20;
+    const auto font = &DejaVu18;
+
+    static LGFX_Sprite codec(&tft);
+    if (!codec.getBuffer() && !codec.createSprite(spriteWidth, spriteHeight))
+    {
+        log_e("could not allocate canvas for codec. system halted");
+        while (1)
+            delay(100);
+    }
+    codec.clear();
+    codec.setTextDatum(CC_DATUM);
+    codec.drawCenterString(msg.str, spriteWidth / 2, (spriteHeight / 2) - (font->yAdvance / 2), font);
+
+    ScopedMutex lock(spiMutex);
+    codec.pushSprite(5, 50);
+}
+
+void handleIp(tftMessage &msg)
+{
+    constexpr int16_t spriteHeight = 40;
+    static LGFX_Sprite ipAddressCanvas(&tft);
+    if (!ipAddressCanvas.getBuffer() && !ipAddressCanvas.createSprite(tft.width(), spriteHeight))
+    {
+        log_e("could not allocate canvas for ipaddress. system halted");
+        while (1)
+            delay(100);
+    }
+
+    ipAddressCanvas.fillScreen(BACKGROUND_COLOR);
+    ipAddressCanvas.setFont(&FreeSansBold18pt7b);
+    ipAddressCanvas.setTextSize(1);
+    ipAddressCanvas.setTextColor(lgfx::color565(255, 255, 255));
+
+    String ipAddress = WiFi.localIP().toString();
+
+    uint16_t width = ipAddressCanvas.textWidth(ipAddress.c_str());
+    uint16_t height = ipAddressCanvas.fontHeight();
+
+    int16_t x = ((ipAddressCanvas.width() - width) / 2) - 4;
+    int16_t y = (ipAddressCanvas.height() - height);
+    ipAddressCanvas.setCursor(x, y);
+    ipAddressCanvas.print(ipAddress);
+
+    ScopedMutex lock(spiMutex);
+    ipAddressCanvas.pushSprite(0, tft.height() - spriteHeight);
+}
+
+void handleBuffer(tftMessage &msg)
+{
+    constexpr int16_t spriteWidth = 100;
+    constexpr int16_t spriteHeight = 20;
+
+    static LGFX_Sprite bufferStatus(&tft);
+    if (!bufferStatus.getBuffer() && !bufferStatus.createSprite(spriteWidth, spriteHeight))
+    {
+        log_e("could not allocate canvas for buffer status. system halted");
+        while (1)
+            delay(100);
+    }
+
+    const int16_t FILLED_AREA = map_range(msg.value1, 0, msg.value2, 0, spriteWidth);
+    bufferStatus.fillRect(0, 0, FILLED_AREA, spriteHeight, lgfx::color565(0, 255, 0));
+    bufferStatus.fillRect(FILLED_AREA, 0, spriteWidth - FILLED_AREA, spriteHeight, lgfx::color565(255, 0, 0));
+
+    ScopedMutex lock(spiMutex);
+    bufferStatus.pushSprite(135, 50);
+}
+
+void handleLoading(tftMessage &msg)
+{
+    {
+        ScopedMutex lock(spiMutex);
+        loader.pushSprite(0, canvas.fontHeight());
+    }
+    if (playerTaskHandle)
+        xTaskNotifyGive(playerTaskHandle);
+}
+
 void tftTask(void *parameter)
 {
     // turn on the TFT / I2C power supply https://learn.adafruit.com/esp32-s3-reverse-tft-feather/pinouts#tft-display-3138945
     pinMode(TFT_I2C_POWER, OUTPUT);
     digitalWrite(TFT_I2C_POWER, HIGH);
-
-    static const uint16_t BACKGROUND_COLOR = lgfx::color565(29, 29, 29);
-    static const uint16_t TEXT_COLOR = lgfx::color565(245, 244, 226);
-
-    static LGFX tft;
 
     {
         ScopedMutex lock(spiMutex);
@@ -43,7 +200,6 @@ void tftTask(void *parameter)
 
     static constexpr int CANVAS_HEIGHT = 20;
 
-    static LGFX_Sprite canvas(&tft);
     if (!canvas.getBuffer() && !canvas.createSprite(tft.width(), CANVAS_HEIGHT))
     {
         log_e("could not allocate canvas for station-name and scroller. system halted");
@@ -53,7 +209,6 @@ void tftTask(void *parameter)
 
     static const auto TOP_OF_SCROLLER = 76;
 
-    static LGFX_Sprite loader(&tft);
     if (!loader.getBuffer() && !loader.createSprite(tft.width(), TOP_OF_SCROLLER - CANVAS_HEIGHT))
     {
         log_e("could not allocate loader sprite. system halted.");
@@ -66,48 +221,24 @@ void tftTask(void *parameter)
     loader.setTextColor(lgfx::color565(255, 255, 255), BACKGROUND_COLOR);
     loader.drawCenterString("connecting...", loader.width() / 2, 2, font);
 
-    static uint16_t strWidth;
-
-    static char streamTitle[264];
-    static int16_t streamTitleOffset = 0;
-
-    static bool showClock = false;
+    constexpr int IDLE_RATE_HZ = 50;
+    constexpr int IDLE_DELAY_MS = 1000 / IDLE_RATE_HZ;
 
     while (1)
     {
-        bool clearTitle = false;
         static tftMessage msg = {};
-        if (xQueueReceive(tftQueue, &msg, pdTICKS_TO_MS(25)) == pdTRUE)
+        if (xQueueReceive(tftQueue, &msg, pdMS_TO_TICKS(IDLE_DELAY_MS)) == pdTRUE)
         {
             switch (msg.type)
             {
             case tftMessage::SYSTEM_MESSAGE:
-                canvas.fillScreen(lgfx::color565(255, 0, 0));
-                canvas.setTextColor(lgfx::color565(255, 255, 255));
-                canvas.setFont(&FreeSansBold9pt7b);
-                canvas.setTextSize(1);
-                canvas.setCursor(4, canvas.height() - canvas.fontHeight());
-                canvas.print(msg.str);
-                {
-                    ScopedMutex lock(spiMutex);
-                    canvas.pushSprite(0, 0);
-                }
-                if (playerTaskHandle)
-                    xTaskNotifyGive(playerTaskHandle);
+                handleSysMess(msg);
                 break;
 
             case tftMessage::PROGRESS_BAR:
-            {
-                const int HEIGHT_IN_PIXELS = 15;
-                const int HEIGHT_OFFSET = 28;
-                const int16_t FILLED_AREA = map_range(msg.value1, 0, msg.value2, 0, tft.width() + 1);
-                {
-                    ScopedMutex lock(spiMutex);
-                    tft.fillRect(0, HEIGHT_OFFSET, FILLED_AREA, HEIGHT_IN_PIXELS, lgfx::color565(0, 0, 255));
-                    tft.fillRect(FILLED_AREA, HEIGHT_OFFSET, tft.width() - FILLED_AREA, HEIGHT_IN_PIXELS, lgfx::color565(255, 255, 255));
-                }
+                handleProgress(msg);
                 break;
-            }
+
             case tftMessage::CLEAR_SCREEN:
                 showClock = false;
                 streamTitle[0] = 0;
@@ -119,153 +250,36 @@ void tftTask(void *parameter)
 
                 break;
             case tftMessage::SHOW_STATION:
-                canvas.fillScreen(0);
-                canvas.setFont(&FreeSansBold9pt7b);
-                canvas.setTextSize(1);
-                canvas.setCursor(4, canvas.height() - canvas.fontHeight());
-                canvas.print(msg.str);
-                {
-                    ScopedMutex lock(spiMutex);
-                    canvas.pushSprite(0, 0);
-                }
+                handleStation(msg);
                 break;
 
             case tftMessage::SHOW_TITLE:
-                if (!strcmp(streamTitle, msg.str))
-                    break;
-
-                if (msg.str[0] == 0)
-                {
-                    clearTitle = true;
-                    streamTitle[0] = 0;
-                    break;
-                }
-                streamTitleOffset = 0;
-                snprintf(streamTitle, sizeof(streamTitle), "%s", msg.str);
-                tft.setTextSize(1);
-                tft.setFont(&FreeSansBold9pt7b);
-                strWidth = tft.textWidth(streamTitle);
+                handleTitle(msg);
                 break;
 
             case tftMessage::SHOW_BITRATE:
-            {
-                constexpr int16_t spriteWidth = 60;
-                constexpr int16_t spriteHeight = 20;
-                const auto font = &DejaVu18;
-
-                static LGFX_Sprite bitrate(&tft);
-                if (!bitrate.getBuffer() && !bitrate.createSprite(spriteWidth, spriteHeight))
-                {
-                    log_e("could not allocate canvas for bitrate. system halted");
-                    while (1)
-                        delay(100);
-                }
-                bitrate.clear();
-                bitrate.setTextDatum(CC_DATUM);
-                char br[8];
-                snprintf(br, sizeof(br), "%zu", msg.value1);
-                bitrate.drawCenterString(br, spriteWidth / 2, (spriteHeight / 2) - (font->yAdvance / 2), font);
-                {
-                    ScopedMutex lock(spiMutex);
-                    bitrate.pushSprite(70, 50);
-                }
-
+                handleBitrate(msg);
                 break;
-            }
 
             case tftMessage::SHOW_CODEC:
-            {
-                constexpr int16_t spriteWidth = 60;
-                constexpr int16_t spriteHeight = 20;
-                const auto font = &DejaVu18;
-
-                static LGFX_Sprite codec(&tft);
-                if (!codec.getBuffer() && !codec.createSprite(spriteWidth, spriteHeight))
-                {
-                    log_e("could not allocate canvas for codec. system halted");
-                    while (1)
-                        delay(100);
-                }
-                codec.clear();
-                codec.setTextDatum(CC_DATUM);
-                codec.drawCenterString(msg.str, spriteWidth / 2, (spriteHeight / 2) - (font->yAdvance / 2), font);
-                {
-                    ScopedMutex lock(spiMutex);
-                    codec.pushSprite(5, 50);
-                }
-
+                handleCodec(msg);
                 break;
-            }
 
             case tftMessage::SHOW_IPADDRESS:
-            {
-                constexpr int16_t spriteHeight = 40;
-                static LGFX_Sprite ipAddressCanvas(&tft);
-                if (!ipAddressCanvas.getBuffer() && !ipAddressCanvas.createSprite(tft.width(), spriteHeight))
-                {
-                    log_e("could not allocate canvas for ipaddress. system halted");
-                    while (1)
-                        delay(100);
-                }
-
-                ipAddressCanvas.fillScreen(BACKGROUND_COLOR);
-                ipAddressCanvas.setFont(&FreeSansBold18pt7b);
-                ipAddressCanvas.setTextSize(1);
-                ipAddressCanvas.setTextColor(lgfx::color565(255, 255, 255));
-
-                String ipAddress = WiFi.localIP().toString();
-
-                uint16_t width = ipAddressCanvas.textWidth(ipAddress.c_str());
-                uint16_t height = ipAddressCanvas.fontHeight();
-
-                int16_t x = ((ipAddressCanvas.width() - width) / 2) - 4;
-                int16_t y = (ipAddressCanvas.height() - height);
-                ipAddressCanvas.setCursor(x, y);
-                ipAddressCanvas.print(ipAddress);
-                {
-                    ScopedMutex lock(spiMutex);
-                    ipAddressCanvas.pushSprite(0, tft.height() - spriteHeight);
-                }
+                handleIp(msg);
                 break;
-            }
 
             case tftMessage::SHOW_CLOCK:
                 showClock = true;
                 break;
 
             case tftMessage::BUFFER_STATUS:
-            {
-                constexpr int16_t spriteWidth = 100;
-                constexpr int16_t spriteHeight = 20;
-
-                static LGFX_Sprite bufferStatus(&tft);
-                if (!bufferStatus.getBuffer() && !bufferStatus.createSprite(spriteWidth, spriteHeight))
-                {
-                    log_e("could not allocate canvas for buffer status. system halted");
-                    while (1)
-                        delay(100);
-                }
-
-                const int16_t FILLED_AREA = map_range(msg.value1, 0, msg.value2, 0, spriteWidth);
-                bufferStatus.fillRect(0, 0, FILLED_AREA, spriteHeight, lgfx::color565(0, 255, 0));
-                bufferStatus.fillRect(FILLED_AREA, 0, spriteWidth - FILLED_AREA, spriteHeight, lgfx::color565(255, 0, 0));
-                {
-                    ScopedMutex lock(spiMutex);
-                    bufferStatus.pushSprite(135, 50);
-                }
+                handleBuffer(msg);
                 break;
-            }
 
             case tftMessage::SHOW_LOADING:
-            {
-                {
-                    ScopedMutex lock(spiMutex);
-                    loader.pushSprite(0, canvas.fontHeight());
-                }
-                if (playerTaskHandle)
-                    xTaskNotifyGive(playerTaskHandle);
+                handleLoading(msg);
                 break;
-            }
 
             default:
                 log_w("unhandled tft msg type");
@@ -308,7 +322,7 @@ void tftTask(void *parameter)
             }
         }
 
-        if (streamTitle[0] || clearTitle)
+        if (millis() - lastTitleShow > (IDLE_DELAY_MS - 1) && (streamTitle[0] || clearTitle))
         {
             canvas.fillScreen(0);
             canvas.setCursor(canvas.width() - streamTitleOffset, canvas.height() - canvas.fontHeight());
@@ -320,8 +334,10 @@ void tftTask(void *parameter)
                 ScopedMutex lock(spiMutex);
                 canvas.pushSprite(0, TOP_OF_SCROLLER);
             }
-            streamTitleOffset = (streamTitleOffset < (canvas.width() + strWidth)) ? streamTitleOffset + 2 : 0;
+            streamTitleOffset = (streamTitleOffset < (canvas.width() + streamTitleWidth)) ? streamTitleOffset + 2 : 0;
             clearTitle = false;
+
+            lastTitleShow = millis();
         }
     }
 }
