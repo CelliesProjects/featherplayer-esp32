@@ -58,25 +58,24 @@ void handleStation(tftMessage &msg)
     ScopedMutex lock(spiMutex);
     canvas.pushSprite(0, 0);
 }
-/*
+
 void handleTitle(tftMessage &msg)
 {
     if (!strcmp(streamTitle, msg.str))
-        break;
+        return;
 
     if (msg.str[0] == 0)
     {
         clearTitle = true;
         streamTitle[0] = 0;
-        break;
+        return;
     }
     streamTitleOffset = 0;
     snprintf(streamTitle, sizeof(streamTitle), "%s", msg.str);
     tft.setTextSize(1);
     tft.setFont(&FreeSansBold9pt7b);
-    strWidth = tft.textWidth(streamTitle);
+    streamTitleWidth = tft.textWidth(streamTitle);
 }
-*/
 
 void handleBitrate(tftMessage &msg)
 {
@@ -182,6 +181,7 @@ void handleLoading(tftMessage &msg)
     if (playerTaskHandle)
         xTaskNotifyGive(playerTaskHandle);
 }
+
 void tftTask(void *parameter)
 {
     // turn on the TFT / I2C power supply https://learn.adafruit.com/esp32-s3-reverse-tft-feather/pinouts#tft-display-3138945
@@ -221,14 +221,11 @@ void tftTask(void *parameter)
     loader.setTextColor(lgfx::color565(255, 255, 255), BACKGROUND_COLOR);
     loader.drawCenterString("connecting...", loader.width() / 2, 2, font);
 
-    static uint16_t strWidth;
-
     constexpr int IDLE_RATE_HZ = 50;
     constexpr int IDLE_DELAY_MS = 1000 / IDLE_RATE_HZ;
 
     while (1)
     {
-        bool clearTitle = false;
         static tftMessage msg = {};
         if (xQueueReceive(tftQueue, &msg, pdMS_TO_TICKS(IDLE_DELAY_MS)) == pdTRUE)
         {
@@ -257,20 +254,7 @@ void tftTask(void *parameter)
                 break;
 
             case tftMessage::SHOW_TITLE:
-                if (!strcmp(streamTitle, msg.str))
-                    break;
-
-                if (msg.str[0] == 0)
-                {
-                    clearTitle = true;
-                    streamTitle[0] = 0;
-                    break;
-                }
-                streamTitleOffset = 0;
-                snprintf(streamTitle, sizeof(streamTitle), "%s", msg.str);
-                tft.setTextSize(1);
-                tft.setFont(&FreeSansBold9pt7b);
-                strWidth = tft.textWidth(streamTitle);
+                handleTitle(msg);
                 break;
 
             case tftMessage::SHOW_BITRATE:
@@ -282,10 +266,8 @@ void tftTask(void *parameter)
                 break;
 
             case tftMessage::SHOW_IPADDRESS:
-            {
                 handleIp(msg);
                 break;
-            }
 
             case tftMessage::SHOW_CLOCK:
                 showClock = true;
@@ -296,10 +278,8 @@ void tftTask(void *parameter)
                 break;
 
             case tftMessage::SHOW_LOADING:
-            {
                 handleLoading(msg);
                 break;
-            }
 
             default:
                 log_w("unhandled tft msg type");
@@ -342,7 +322,7 @@ void tftTask(void *parameter)
             }
         }
 
-        if (millis() - lastTitleShow > (IDLE_DELAY_MS - 1)  && (streamTitle[0] || clearTitle))
+        if (millis() - lastTitleShow > (IDLE_DELAY_MS - 1) && (streamTitle[0] || clearTitle))
         {
             canvas.fillScreen(0);
             canvas.setCursor(canvas.width() - streamTitleOffset, canvas.height() - canvas.fontHeight());
@@ -354,7 +334,7 @@ void tftTask(void *parameter)
                 ScopedMutex lock(spiMutex);
                 canvas.pushSprite(0, TOP_OF_SCROLLER);
             }
-            streamTitleOffset = (streamTitleOffset < (canvas.width() + strWidth)) ? streamTitleOffset + 2 : 0;
+            streamTitleOffset = (streamTitleOffset < (canvas.width() + streamTitleWidth)) ? streamTitleOffset + 2 : 0;
             clearTitle = false;
 
             lastTitleShow = millis();
