@@ -223,11 +223,14 @@ void tftTask(void *parameter)
 
     static uint16_t strWidth;
 
+    constexpr int IDLE_RATE_HZ = 50;
+    constexpr int IDLE_DELAY_MS = 1000 / IDLE_RATE_HZ;
+
     while (1)
     {
         bool clearTitle = false;
         static tftMessage msg = {};
-        if (xQueueReceive(tftQueue, &msg, pdTICKS_TO_MS(50)) == pdTRUE)
+        if (xQueueReceive(tftQueue, &msg, pdMS_TO_TICKS(IDLE_DELAY_MS)) == pdTRUE)
         {
             switch (msg.type)
             {
@@ -339,7 +342,7 @@ void tftTask(void *parameter)
             }
         }
 
-        if (streamTitle[0] || clearTitle)
+        if (millis() - lastTitleShow > (IDLE_DELAY_MS - 1)  && (streamTitle[0] || clearTitle))
         {
             canvas.fillScreen(0);
             canvas.setCursor(canvas.width() - streamTitleOffset, canvas.height() - canvas.fontHeight());
@@ -353,6 +356,8 @@ void tftTask(void *parameter)
             }
             streamTitleOffset = (streamTitleOffset < (canvas.width() + strWidth)) ? streamTitleOffset + 2 : 0;
             clearTitle = false;
+
+            lastTitleShow = millis();
         }
     }
 }

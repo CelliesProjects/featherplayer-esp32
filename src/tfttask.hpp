@@ -19,6 +19,7 @@ LGFX_Sprite loader(&tft);
 
 char streamTitle[264];
 int16_t streamTitleOffset = 0;
+unsigned long lastTitleShow = 0;
 bool showClock = false;
 
 const uint16_t BACKGROUND_COLOR = lgfx::color565(29, 29, 29);
