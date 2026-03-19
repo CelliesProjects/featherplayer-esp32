@@ -26,7 +26,7 @@ const auto TOP_OF_SCROLLER = 76;
 bool clearTitle = false;
 bool showClock = false;
 
-const uint16_t BACKGROUND_COLOR = lgfx::color565(29, 29, 29);
+const uint16_t BACKGROUND_COLOR = lgfx::color565(32, 32, 32);
 const uint16_t TEXT_COLOR = lgfx::color565(245, 244, 226);
 
 #endif
