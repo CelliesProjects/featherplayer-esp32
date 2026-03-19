@@ -21,6 +21,8 @@ char streamTitle[264];
 int16_t streamTitleOffset = 0;
 uint16_t streamTitleWidth = 0;
 unsigned long lastTitleShow = 0;
+const auto TOP_OF_SCROLLER = 76;
+
 bool clearTitle = false;
 bool showClock = false;
 

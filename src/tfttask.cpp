@@ -182,6 +182,61 @@ void handleLoading(tftMessage &msg)
         xTaskNotifyGive(playerTaskHandle);
 }
 
+void handleScroller()
+{
+    canvas.fillScreen(0);
+    canvas.setCursor(canvas.width() - streamTitleOffset, canvas.height() - canvas.fontHeight());
+    canvas.setFont(&FreeSansBold9pt7b);
+    canvas.setTextSize(1);
+    canvas.setTextWrap(false);
+    canvas.print(streamTitle);
+    {
+        ScopedMutex lock(spiMutex);
+        canvas.pushSprite(0, TOP_OF_SCROLLER);
+    }
+    streamTitleOffset = (streamTitleOffset < (canvas.width() + streamTitleWidth)) ? streamTitleOffset + 2 : 0;
+    clearTitle = false;
+
+    lastTitleShow = millis();
+}
+
+void handleClock()
+{
+    
+    const time_t now = time(NULL);
+    char currentTime[CLOCKSTR_LEN];
+    strftime(currentTime, sizeof(currentTime), "%R", localtime(&now));
+
+    if (strstr(previousTime, currentTime))
+        return;
+
+    static LGFX_Sprite clock(&tft);
+    if (!clock.getBuffer() && !clock.createSprite(tft.width(), TOP_OF_SCROLLER))
+    {
+        log_e("could not allocate clock sprite. system halted.");
+        while (1)
+            delay(100);
+    }
+
+    clock.setFont(&FreeSansBold24pt7b);
+    clock.setTextSize(2);
+    clock.fillScreen(BACKGROUND_COLOR);
+    const uint16_t width = clock.textWidth(currentTime);
+
+    clock.setTextColor(TEXT_COLOR);
+    clock.setCursor((clock.width() / 2) - (width / 2) - 5, 0);
+    clock.print(currentTime);
+
+    // make the characters a bit wider
+    clock.setCursor((clock.width() / 2) - (width / 2) - 3, 0);
+    clock.print(currentTime);
+    {
+        ScopedMutex lock(spiMutex);
+        clock.pushSprite(0, 0);
+    }
+    snprintf(previousTime, sizeof(previousTime), "%s", currentTime);
+}
+
 void tftTask(void *parameter)
 {
     // turn on the TFT / I2C power supply https://learn.adafruit.com/esp32-s3-reverse-tft-feather/pinouts#tft-display-3138945
@@ -206,8 +261,6 @@ void tftTask(void *parameter)
         while (1)
             delay(100);
     }
-
-    static const auto TOP_OF_SCROLLER = 76;
 
     if (!loader.getBuffer() && !loader.createSprite(tft.width(), TOP_OF_SCROLLER - CANVAS_HEIGHT))
     {
@@ -245,7 +298,7 @@ void tftTask(void *parameter)
                 streamTitleOffset = 0;
                 {
                     ScopedMutex lock(spiMutex);
-                    tft.fillRect(0, canvas.height(), tft.width(), TOP_OF_SCROLLER - canvas.height(), BACKGROUND_COLOR);
+                    tft.fillRect(0, canvas.height(), canvas.width(), TOP_OF_SCROLLER - canvas.height(), BACKGROUND_COLOR);
                 }
 
                 break;
@@ -286,58 +339,10 @@ void tftTask(void *parameter)
             }
         }
 
-        if (showClock)
-        {
-            const time_t now = time(NULL);
-            char currentTime[CLOCKSTR_LEN];
-            strftime(currentTime, sizeof(currentTime), "%R", localtime(&now));
-
-            if (!strstr(previousTime, currentTime))
-            {
-                static LGFX_Sprite clock(&tft);
-                if (!clock.getBuffer() && !clock.createSprite(tft.width(), TOP_OF_SCROLLER))
-                {
-                    log_e("could not allocate clock sprite. system halted.");
-                    while (1)
-                        delay(100);
-                }
-
-                clock.setFont(&FreeSansBold24pt7b);
-                clock.setTextSize(2);
-                clock.fillScreen(BACKGROUND_COLOR);
-                const uint16_t width = clock.textWidth(currentTime);
-
-                clock.setTextColor(TEXT_COLOR);
-                clock.setCursor((clock.width() / 2) - (width / 2) - 5, 0);
-                clock.print(currentTime);
-
-                // make the characters a bit wider
-                clock.setCursor((clock.width() / 2) - (width / 2) - 3, 0);
-                clock.print(currentTime);
-                {
-                    ScopedMutex lock(spiMutex);
-                    clock.pushSprite(0, 0);
-                }
-                snprintf(previousTime, sizeof(previousTime), "%s", currentTime);
-            }
-        }
-
         if (millis() - lastTitleShow > (IDLE_DELAY_MS - 1) && (streamTitle[0] || clearTitle))
-        {
-            canvas.fillScreen(0);
-            canvas.setCursor(canvas.width() - streamTitleOffset, canvas.height() - canvas.fontHeight());
-            canvas.setFont(&FreeSansBold9pt7b);
-            canvas.setTextSize(1);
-            canvas.setTextWrap(false);
-            canvas.print(streamTitle);
-            {
-                ScopedMutex lock(spiMutex);
-                canvas.pushSprite(0, TOP_OF_SCROLLER);
-            }
-            streamTitleOffset = (streamTitleOffset < (canvas.width() + streamTitleWidth)) ? streamTitleOffset + 2 : 0;
-            clearTitle = false;
+            handleScroller();
 
-            lastTitleShow = millis();
-        }
+        if (showClock)
+            handleClock();
     }
 }
