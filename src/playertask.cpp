@@ -142,7 +142,7 @@ void playerTask(void *parameter)
     while (1)
     {
         static playerMessage msg;
-        if (xQueueReceive(playerQueue, &msg, pdMS_TO_TICKS(10)) == pdTRUE)
+        if (xQueueReceive(playerQueue, &msg, pdMS_TO_TICKS(3)) == pdTRUE)
         {
             switch (msg.type)
             {
