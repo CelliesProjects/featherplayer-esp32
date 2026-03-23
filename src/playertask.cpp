@@ -106,7 +106,10 @@ static void startItem(ESP32_VS1053_Stream &audio, playerMessage &msg)
     }
 
     if (audio.isRunning())
-        sendTftMessage(tftMessage::CLEAR_SCREEN);
+    {
+        if (!msg.offset)
+            sendTftMessage(tftMessage::CLEAR_SCREEN);
+    }
     else
         playListEnd();
 }
