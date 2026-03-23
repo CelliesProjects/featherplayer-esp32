@@ -91,7 +91,7 @@ static void startItem(ESP32_VS1053_Stream &audio, playerMessage &msg)
 
         bool success = false;
         {
-            ScopedMutex lock(spiMutex);
+            //ScopedMutex lock(spiMutex); // not needed since connectToHost does not touch the spi bus
             success = audio.connectToHost(playList.url(playList.currentItem()).c_str(), LIBRARY_USER, LIBRARY_PWD, msg.offset);
         }
 
