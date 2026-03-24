@@ -20,14 +20,14 @@ public:
         cfg.panel_height = 240;
 
         // upside down orientation -> thuis speler
-        // cfg.offset_x = 52;
-        // cfg.offset_y = 40;
-        // cfg.offset_rotation = 0;
+         cfg.offset_x = 52;
+         cfg.offset_y = 40;
+         cfg.offset_rotation = 0;
 
         // normal orientation -> auto speler
-        cfg.offset_x = 52;
-        cfg.offset_y = -40;
-        cfg.offset_rotation = 2;
+        //cfg.offset_x = 52;
+        //cfg.offset_y = -40;
+        //cfg.offset_rotation = 2;
 
         cfg.dummy_read_pixel = 8;
         cfg.dummy_read_bits = 1;
