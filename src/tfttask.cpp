@@ -77,7 +77,7 @@ void handleTitle(tftMessage &msg)
     streamTitleWidth = tft.textWidth(streamTitle);
 }
 
-constexpr auto bgColor = TFT_GREEN; //lgfx::color565(0, 0, 224);
+constexpr auto bgColor = TFT_GREEN;
 constexpr auto txtColor = TFT_BLACK;
 
 void handleBitrate(tftMessage &msg)
@@ -207,7 +207,6 @@ void handleScroller()
 
 void handleClock()
 {
-
     const time_t now = time(NULL);
     char currentTime[CLOCKSTR_LEN];
     strftime(currentTime, sizeof(currentTime), "%R", localtime(&now));
