@@ -77,6 +77,9 @@ void handleTitle(tftMessage &msg)
     streamTitleWidth = tft.textWidth(streamTitle);
 }
 
+constexpr auto bgColor = TFT_GREEN; //lgfx::color565(0, 0, 224);
+constexpr auto txtColor = TFT_BLACK;
+
 void handleBitrate(tftMessage &msg)
 {
     constexpr int16_t spriteWidth = 60;
@@ -90,9 +93,10 @@ void handleBitrate(tftMessage &msg)
         while (1)
             delay(100);
     }
-    bitrate.clear();
+    bitrate.clear(bgColor);
+    bitrate.setTextColor(txtColor, bgColor);
     bitrate.setTextDatum(CC_DATUM);
-    char br[8];
+    char br[12];
     snprintf(br, sizeof(br), "%zu", msg.value1);
     bitrate.drawCenterString(br, spriteWidth / 2, (spriteHeight / 2) - (font->yAdvance / 2), font);
 
@@ -113,8 +117,9 @@ void handleCodec(tftMessage &msg)
         while (1)
             delay(100);
     }
-    codec.clear();
+    codec.clear(bgColor);
     codec.setTextDatum(CC_DATUM);
+    codec.setTextColor(txtColor, bgColor);
     codec.drawCenterString(msg.str, spriteWidth / 2, (spriteHeight / 2) - (font->yAdvance / 2), font);
 
     ScopedMutex lock(spiMutex);
@@ -202,7 +207,7 @@ void handleScroller()
 
 void handleClock()
 {
-    
+
     const time_t now = time(NULL);
     char currentTime[CLOCKSTR_LEN];
     strftime(currentTime, sizeof(currentTime), "%R", localtime(&now));
