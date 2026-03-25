@@ -32,7 +32,7 @@ const struct source preset[]{
     {"RadioEins", "http://radioeins.de/stream"},
     {"ZUN radio", "https://icecast9.play.cz/zun192.mp3"},
     {"Tekno1", "https://tekno1.radioca.st/listen.pls?sid=1"},
-    {"Techno.FM", "http://stream.techno.fm/radio320.mp3"},
+    {"Techno on Radio", "https://0n-techno.radionetz.de/0n-techno.aac"},
     {"Record TECHNO", "https://radiorecord.hostingradio.ru/techno96.aacp"},
     {"Kaaosradio 24h", "http://stream.kaaosradio.fi:8000/stream2"},
     {"bollywooddance", "https://nl4.mystreaming.net/uber/bollywooddance/icecast.audio"},
