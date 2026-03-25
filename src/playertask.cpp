@@ -80,18 +80,18 @@ static void startItem(ESP32_VS1053_Stream &audio, playerMessage &msg)
     {
         if (!msg.offset)
         {
+            sendTftMessage(tftMessage::SHOW_STATION, playList.name(playList.currentItem()).c_str());
             sendTftMessage(tftMessage::SHOW_TITLE, "");
             sendTftMessage(tftMessage::SHOW_LOADING);
-            sendTftMessage(tftMessage::SHOW_STATION, playList.name(playList.currentItem()).c_str());
-            ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
             sendServerMessage(serverMessage::WS_UPDATE_NOWPLAYING);
             sendServerMessage(serverMessage::WS_UPDATE_STREAMTITLE);
             sendServerMessage(serverMessage::WS_UPDATE_STATION, playList.name(playList.currentItem()).c_str());
+            ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
         }
 
         bool success = false;
         {
-            //ScopedMutex lock(spiMutex); // not needed since connectToHost does not touch the spi bus
+            ScopedMutex lock(spiMutex);
             success = audio.connectToHost(playList.url(playList.currentItem()).c_str(), LIBRARY_USER, LIBRARY_PWD, msg.offset);
         }
 
@@ -107,7 +107,10 @@ static void startItem(ESP32_VS1053_Stream &audio, playerMessage &msg)
     if (audio.isRunning())
     {
         if (!msg.offset)
+        {
             sendTftMessage(tftMessage::CLEAR_SCREEN);
+            sendTftMessage(tftMessage::SHOW_TITLE, "");
+        }
     }
     else
         playListEnd();
