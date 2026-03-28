@@ -55,9 +55,11 @@ void playListEnd()
 
 static void startItem(ESP32_VS1053_Stream &audio, playerMessage &msg)
 {
+    sendTftMessage(tftMessage::SHOW_TITLE, "");
+    sendServerMessage(serverMessage::WS_UPDATE_STREAMTITLE);
+
     if (audio.isRunning())
     {
-        infoCallback(" ");
         ScopedMutex lock(spiMutex);
         audio.stopSong();
     }
@@ -83,10 +85,10 @@ static void startItem(ESP32_VS1053_Stream &audio, playerMessage &msg)
             sendTftMessage(tftMessage::SHOW_STATION, playList.name(playList.currentItem()).c_str());
             sendTftMessage(tftMessage::SHOW_TITLE, "");
             sendTftMessage(tftMessage::SHOW_LOADING);
+            ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
             sendServerMessage(serverMessage::WS_UPDATE_NOWPLAYING);
             sendServerMessage(serverMessage::WS_UPDATE_STREAMTITLE);
             sendServerMessage(serverMessage::WS_UPDATE_STATION, playList.name(playList.currentItem()).c_str());
-            ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
         }
 
         bool success = false;
@@ -98,7 +100,7 @@ static void startItem(ESP32_VS1053_Stream &audio, playerMessage &msg)
         if (success)
             break;
 
-        log_w("item %i failed to start", playList.currentItem());
+        log_v("item %i failed to start", playList.currentItem());
 
         msg.offset = 0; // do not loop through the playlist with an offset
         playList.setCurrentItem(playList.currentItem() + 1);
