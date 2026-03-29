@@ -55,7 +55,7 @@ void playListEnd()
 
 static void startItem(ESP32_VS1053_Stream &audio, playerMessage &msg)
 {
-    sendTftMessage(tftMessage::SHOW_TITLE, "");
+    sendTftMessage(tftMessage::SHOW_TITLE, " ");
     sendServerMessage(serverMessage::WS_UPDATE_STREAMTITLE);
 
     if (audio.isRunning())
@@ -83,7 +83,7 @@ static void startItem(ESP32_VS1053_Stream &audio, playerMessage &msg)
         if (!msg.offset)
         {
             sendTftMessage(tftMessage::SHOW_STATION, playList.name(playList.currentItem()).c_str());
-            sendTftMessage(tftMessage::SHOW_TITLE, "");
+            sendTftMessage(tftMessage::SHOW_TITLE, " ");
             sendTftMessage(tftMessage::SHOW_LOADING);
             ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
             sendServerMessage(serverMessage::WS_UPDATE_NOWPLAYING);
