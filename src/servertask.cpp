@@ -296,7 +296,8 @@ static void webserverUrlSetup()
         "/favorites", [](PsychicRequest *request, PsychicResponse *resp)
         { return resp->send(favoritesToCStruct().c_str()); });
 
-#if defined(CORE_DEBUG_LEVEL) && (CORE_DEBUG_LEVEL >= 4)
+#define SHOW_STATS false
+#if defined(SHOW_STATS) && (SHOW_STATS == true)
 
     static constexpr const char *TEXT_PLAIN = "text/plain";
 
