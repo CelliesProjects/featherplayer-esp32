@@ -295,6 +295,60 @@ static void webserverUrlSetup()
     server.on(
         "/favorites", [](PsychicRequest *request, PsychicResponse *resp)
         { return resp->send(favoritesToCStruct().c_str()); });
+    /*
+        server.on(
+            "/api/showfolder", [](PsychicRequest *request, PsychicResponse *resp)
+            { return resp->send("test"); });
+    */
+    server.on("/api/showfolder", [](PsychicRequest *request, PsychicResponse *resp)
+              {                                    
+        if (!request->hasParam("path"))
+            return resp->send(400, "text/plain", "Missing path");
+
+        String path = request->getParam("path")->value();
+        if (path.length() == 0 || path[0] != '/')
+            return resp->send(400, "text/plain", "Invalid path");
+
+        ScopedMutex lock(spiMutex, 1000);
+        if (!lock.acquired())
+            return resp->send(500, "text/plain", "mutex timeout");
+
+        File dir = SD.open(path);
+        if (!dir || !dir.isDirectory())
+            return resp->send(400, "text/plain", "Invalid directory");
+
+        // ---- start response ----
+        resp->setCode(200);
+        resp->setContentType("text/plain");
+        //resp->begin();   // important: starts headers
+
+        char line[256];
+
+        File file;
+        while ((file = dir.openNextFile()))
+        {
+            int len = snprintf(line, sizeof(line),
+                                "%s %s\n",
+                                file.isDirectory() ? "[D]" : "[F]",
+                                file.name());
+
+            if (len > 0)
+            {
+                if (resp->sendChunk((uint8_t*)line, len) != ESP_OK)
+                {
+                    // connection likely dropped → stop early
+                    break;
+                }
+            }
+
+            // optional: be nice to scheduler under heavy loads
+            // vTaskDelay(0);
+        }
+
+    // ---- terminate chunked response ----
+    resp->sendChunk(nullptr, 0);  // IMPORTANT: ends chunked stream
+
+    return ESP_OK; });
 
 #define SHOW_STATS false
 #if defined(SHOW_STATS) && (SHOW_STATS == true)
@@ -304,58 +358,58 @@ static void webserverUrlSetup()
     server.on(
         "/api/taskstats", HTTP_GET, [](PsychicRequest *request, PsychicResponse *resp)
         {
-            uint32_t totalRunTime;
-            UBaseType_t taskCount = uxTaskGetNumberOfTasks();
+        uint32_t totalRunTime;
+        UBaseType_t taskCount = uxTaskGetNumberOfTasks();
 
-            TaskStatus_t *pxTaskStatusArray = (TaskStatus_t *)heap_caps_malloc(taskCount * sizeof(TaskStatus_t), MALLOC_CAP_INTERNAL);
-            if (!pxTaskStatusArray) 
-                return resp->send(500, TEXT_PLAIN, "Memory allocation failed");
+        TaskStatus_t *pxTaskStatusArray = (TaskStatus_t *)heap_caps_malloc(taskCount * sizeof(TaskStatus_t), MALLOC_CAP_INTERNAL);
+        if (!pxTaskStatusArray)
+            return resp->send(500, TEXT_PLAIN, "Memory allocation failed");
 
-            UBaseType_t retrievedTasks = uxTaskGetSystemState(pxTaskStatusArray, taskCount, &totalRunTime);
-            if (totalRunTime == 0 || retrievedTasks == 0) 
-            {
-                heap_caps_free(pxTaskStatusArray);
-                return resp->send(500, TEXT_PLAIN, "Failed to get task stats");
-            }
-
-            String csvResponse = "Name,State,Priority,Min Stack Left,Runtime,CPU%\n";
-
-            for (UBaseType_t i = 0; i < retrievedTasks; i++) 
-            {
-                const char *taskName = pxTaskStatusArray[i].pcTaskName;
-
-                float cpuPercent = ((float)pxTaskStatusArray[i].ulRunTimeCounter / (float)totalRunTime) * 100.0f;
-
-                csvResponse += String(taskName) + "," +
-                            String(pxTaskStatusArray[i].eCurrentState) + "," +
-                            String(pxTaskStatusArray[i].uxCurrentPriority) + "," +
-                            String(pxTaskStatusArray[i].usStackHighWaterMark) + "," +
-                            String(pxTaskStatusArray[i].ulRunTimeCounter) + "," +
-                            String(cpuPercent, 2) + "\n";
-            }
-
+        UBaseType_t retrievedTasks = uxTaskGetSystemState(pxTaskStatusArray, taskCount, &totalRunTime);
+        if (totalRunTime == 0 || retrievedTasks == 0)
+        {
             heap_caps_free(pxTaskStatusArray);
+            return resp->send(500, TEXT_PLAIN, "Failed to get task stats");
+        }
 
-            return resp->send(200, TEXT_PLAIN, csvResponse.c_str()); }
+        String csvResponse = "Name,State,Priority,Min Stack Left,Runtime,CPU%\n";
+
+        for (UBaseType_t i = 0; i < retrievedTasks; i++)
+        {
+            const char *taskName = pxTaskStatusArray[i].pcTaskName;
+
+            float cpuPercent = ((float)pxTaskStatusArray[i].ulRunTimeCounter / (float)totalRunTime) * 100.0f;
+
+            csvResponse += String(taskName) + "," +
+                           String(pxTaskStatusArray[i].eCurrentState) + "," +
+                           String(pxTaskStatusArray[i].uxCurrentPriority) + "," +
+                           String(pxTaskStatusArray[i].usStackHighWaterMark) + "," +
+                           String(pxTaskStatusArray[i].ulRunTimeCounter) + "," +
+                           String(cpuPercent, 2) + "\n";
+        }
+
+        heap_caps_free(pxTaskStatusArray);
+
+        return resp->send(200, TEXT_PLAIN, csvResponse.c_str()); }
 
     );
 
     server.on(
         "/stats", HTTP_GET, [](PsychicRequest *request, PsychicResponse *resp)
         {
-            if (samePageIsCached(request))
-                return resp->send(304);
+        if (samePageIsCached(request))
+            return resp->send(304);
 
-            extern const uint8_t stats_start[] asm("_binary_src_webui_stats_html_gz_start");
-            extern const uint8_t stats_end[] asm("_binary_src_webui_stats_html_gz_end");   
+        extern const uint8_t stats_start[] asm("_binary_src_webui_stats_html_gz_start");
+        extern const uint8_t stats_end[] asm("_binary_src_webui_stats_html_gz_end");
 
-            PsychicResponse response = PsychicResponse(request);
-            addStaticContentHeaders(response);
-            response.addHeader(CONTENT_ENCODING, ENCODING_GZIP);
-            response.setContentType(TEXT_HTML);
-            const size_t size =(stats_end - stats_start);
-            response.setContent(stats_start, size);
-            return response.send(); }
+        PsychicResponse response = PsychicResponse(request);
+        addStaticContentHeaders(response);
+        response.addHeader(CONTENT_ENCODING, ENCODING_GZIP);
+        response.setContentType(TEXT_HTML);
+        const size_t size = (stats_end - stats_start);
+        response.setContent(stats_start, size);
+        return response.send(); }
 
     );
 #endif
@@ -391,8 +445,8 @@ static void webserverUrlSetup()
     server.onNotFound(
         [](PsychicRequest *request, PsychicResponse *resp)
         {
-            log_e("404 - Not found: 'http://%s%s'", request->host().c_str(), request->url().c_str());
-            return resp->send(404, TEXT_HTML, "<h1>404 Page not found!</h1><br>The page you are looking for is gone"); });
+        log_e("404 - Not found: 'http://%s%s'", request->host().c_str(), request->url().c_str());
+        return resp->send(404, TEXT_HTML, "<h1>404 Page not found!</h1><br>The page you are looking for is gone"); });
 
     DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
 }
