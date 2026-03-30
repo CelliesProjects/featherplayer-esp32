@@ -35,6 +35,25 @@ void eofCallback(const char *info)
     sendPlayerMessage(playerMessage::START_ITEM, playList.currentItem() + 1);
 }
 
+void mountSDcard()
+{
+    if (!SD.begin(SDREADER_CS))
+    {
+        log_e("Card Mount Failed");
+        return;
+    }
+    
+    uint8_t cardType = SD.cardType();
+    if (cardType == CARD_NONE)
+    {
+        log_e("No SD card attached");
+        return;
+    }
+
+    uint64_t cardSize = SD.cardSize() / (1024 * 1024);
+    log_i("SD Card Size: %lluMB", cardSize);
+}
+
 void playListEnd()
 {
     previousTime[0] = 0;
@@ -120,8 +139,15 @@ static void startItem(ESP32_VS1053_Stream &audio, playerMessage &msg)
 
 void playerTask(void *parameter)
 {
-    sendTftMessage(tftMessage::SYSTEM_MESSAGE, "Starting codec...");
+    sendTftMessage(tftMessage::SYSTEM_MESSAGE, "Mounting SD...");
+    ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 
+    {
+        ScopedMutex lock(spiMutex);
+        mountSDcard();
+    }
+
+    sendTftMessage(tftMessage::SYSTEM_MESSAGE, "Starting codec...");
     ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 
     static ESP32_VS1053_Stream audio;

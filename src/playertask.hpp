@@ -1,5 +1,7 @@
 #ifndef _PLAYERTASK_HPP_
 #define _PLAYERTASK_HPP_
+#include <FS.h>
+#include <SD.h>
 
 #include <VS1053.h> /* https://github.com/baldram/ESP_VS1053_Library */
 #include <ESP32_VS1053_Stream.h>
@@ -13,6 +15,8 @@
 #define VS1053_CS 6
 #define VS1053_DCS 10
 #define VS1053_DREQ 9
+#define SDREADER_CS 5
+
 
 playList_t playList;
 QueueHandle_t playerQueue = nullptr;

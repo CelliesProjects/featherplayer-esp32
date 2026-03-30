@@ -1,8 +1,7 @@
 #include <Arduino.h>
 #include <WiFi.h>
 #include <FFat.h>
-#include <FS.h>
-#include <SD.h>
+#include <SPI.h>
 
 #include "ScopedMutex.h"
 #include "playList.h"
@@ -51,45 +50,6 @@ void WiFiEvent(WiFiEvent_t event)
     }
 }
 
-static void mountSDcard()
-{
-    const int SDREADER_CS = 5;
-
-    if (!SD.begin(SDREADER_CS))
-    {
-        log_e("Card Mount Failed");
-        return;
-    }
-    uint8_t cardType = SD.cardType();
-
-    if (cardType == CARD_NONE)
-    {
-        log_e("No SD card attached");
-        return;
-    }
-
-    log_i("SD Card Type: ");
-    if (cardType == CARD_MMC)
-    {
-        log_i("MMC");
-    }
-    else if (cardType == CARD_SD)
-    {
-        log_i("SDSC");
-    }
-    else if (cardType == CARD_SDHC)
-    {
-        log_i("SDHC");
-    }
-    else
-    {
-        log_i("UNKNOWN");
-    }
-
-    uint64_t cardSize = SD.cardSize() / (1024 * 1024);
-    log_i("SD Card Size: %lluMB\n", cardSize);
-}
-
 void setup()
 {
     Serial.begin(115200);
@@ -112,10 +72,7 @@ void setup()
     }
     xSemaphoreGive(spiMutex);
 
-    {
-        ScopedMutex lock(spiMutex);
-        mountSDcard();
-    }
+
 
     tftQueue = xQueueCreate(5, sizeof(struct tftMessage));
     if (!tftQueue)
