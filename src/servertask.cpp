@@ -302,49 +302,56 @@ static void webserverUrlSetup()
     */
     server.on("/api/showfolder", [](PsychicRequest *request, PsychicResponse *resp)
               {                                    
-        if (!request->hasParam("path"))
-            return resp->send(400, "text/plain", "Missing path");
+    if (!request->hasParam("path"))
+        return resp->send(400, "text/plain", "Missing path");
 
-        String path = request->getParam("path")->value();
-        if (path.length() == 0 || path[0] != '/')
-            return resp->send(400, "text/plain", "Invalid path");
+    String path = request->getParam("path")->value();
+    if (path.length() == 0 || path[0] != '/')
+        return resp->send(400, "text/plain", "Invalid path");
 
+    File dir;
+    {
         ScopedMutex lock(spiMutex, 1000);
-        if (!lock.acquired())
-            return resp->send(500, "text/plain", "mutex timeout");
-
-        File dir = SD.open(path);
+        dir = SD.open(path);
         if (!dir || !dir.isDirectory())
             return resp->send(400, "text/plain", "Invalid directory");
+    }
 
-        // ---- start response ----
-        resp->setCode(200);
-        resp->setContentType("text/plain");
-        //resp->begin();   // important: starts headers
+    // ---- start response ----
+    resp->setCode(200);
+    resp->setContentType("text/plain");
 
-        char line[256];
+    char line[256];
+    File file;
 
-        File file;
-        while ((file = dir.openNextFile()))
+    while (true)
+    {
         {
+            ScopedMutex lock(spiMutex, 1000);
+            if (!lock.acquired())
+                break;
+
+            file = dir.openNextFile();
+            if (!file)
+                break;
+
             int len = snprintf(line, sizeof(line),
-                                "%s %s\n",
-                                file.isDirectory() ? "[D]" : "[F]",
-                                file.name());
+                            "%s %s\n",
+                            file.isDirectory() ? "[D]" : "[F]",
+                            file.name());
 
-            if (len > 0)
-            {
-                if (resp->sendChunk((uint8_t*)line, len) != ESP_OK)
-                {
-                    // connection likely dropped → stop early
-                    break;
-                }
-            }
+            // IMPORTANT:
+            // file goes out of scope here → closed while mutex is held
+            if (len <= 0)
+                continue;
 
-            // optional: be nice to scheduler under heavy loads
-            // vTaskDelay(0);
+            // leave critical section BEFORE sending
         }
 
+        if (resp->sendChunk((uint8_t*)line, strlen(line)) != ESP_OK)
+            break;
+        delay(2);
+    }
     // ---- terminate chunked response ----
     resp->sendChunk(nullptr, 0);  // IMPORTANT: ends chunked stream
 
