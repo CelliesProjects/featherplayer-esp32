@@ -29,7 +29,7 @@ public:
         //cfg.offset_y = -40;
         //cfg.offset_rotation = 2;
 
-        cfg.dummy_read_pixel = 8;
+        cfg.dummy_read_pixel = 16;
         cfg.dummy_read_bits = 1;
         cfg.readable = false;
         cfg.invert = true;
@@ -44,7 +44,7 @@ public:
         buscfg.spi_mode = 0;
         buscfg.freq_write = 80000000;
         buscfg.freq_read = 16000000;
-        buscfg.spi_3wire = false;
+        buscfg.spi_3wire = true;
         buscfg.use_lock = true;
         buscfg.dma_channel = 1;
         buscfg.pin_sclk = SCK;
