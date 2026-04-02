@@ -756,7 +756,29 @@ void serverTask(void *parameter)
 
             case serverMessage::WS_UPDATE_STREAMTITLE:
             {
-                snprintf(streamTitle, sizeof(streamTitle), "streamtitle\n%s\n", percentEncode(msg.str).c_str());
+                const auto META_MAX = 1024;
+                const auto META_UTF8_MAX = (META_MAX * 2 + 1);
+
+                static char *g_utf8buf = nullptr;
+
+                if (!g_utf8buf)
+                {
+                    g_utf8buf = (char *)ps_malloc(META_UTF8_MAX);
+                    if (!g_utf8buf)
+                    {
+                        log_e("UTF8 buffer alloc failed");
+                        break;
+                    }
+                }
+
+                size_t len = strnlen(msg.str, sizeof(msg.str));
+
+                normalize_to_utf8(msg.str, len, g_utf8buf, META_UTF8_MAX);
+
+                snprintf(streamTitle, sizeof(streamTitle),
+                         "streamtitle\n%s\n",
+                         g_utf8buf);
+
                 websocketHandler.sendAll(streamTitle);
                 break;
             }

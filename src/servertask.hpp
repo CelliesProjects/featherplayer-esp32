@@ -22,7 +22,7 @@ static char streamTitle[180]{};
 
 extern QueueHandle_t playerQueue;
 extern void sendPlayerMessage(playerMessage::Type type, uint8_t value = 0, size_t offset = 0);
-extern String percentEncode(const char *plaintext);
+extern size_t normalize_to_utf8(const char *in, size_t in_len, char *out, size_t out_size);
 extern void playListEnd();
 
 extern uint8_t _playerVolume;

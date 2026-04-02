@@ -1,145 +1,118 @@
 #ifndef __PERCENT_ENCODE__
 #define __PERCENT_ENCODE__
 
-String percentEncode(const char *plaintext)
+size_t normalize_to_utf8(const char* in, size_t in_len,
+                         char* out, size_t out_size)
 {
-    String result{};
-    uint32_t cnt{0};
-    while (plaintext[cnt] != 0)
+    size_t i = 0;
+    size_t o = 0;
+
+    while (i < in_len)
     {
-        if (plaintext[cnt] > 0x7F || plaintext[cnt] < 0x20)
+        uint8_t c = (uint8_t)in[i];
+
+        if (c == 0)
+            break;
+
+        // ASCII
+        if (c < 0x80)
         {
-            switch (plaintext[cnt])
-            {
-
-            case 0xC2:
-            {
-                const uint8_t firstByte = plaintext[cnt];
-                cnt++;
-                const uint8_t secondByte = plaintext[cnt];
-                switch (secondByte)
-                {
-                case 0xA0 ... 0xBF:
-                {
-                    result.concat((char)firstByte);
-                    result.concat((char)secondByte);
-                }
-                break;
-                default:
-                {
-                    result.concat("?");
-                    log_e("Invalid 16-bit utf8 sequence. Dropped 2 bytes.");
-                }
-                }
-            }
-            break;
-
-            case 0xC3:
-            {
-                const uint8_t firstByte = plaintext[cnt];
-                cnt++;
-                const uint8_t secondByte = plaintext[cnt];
-                switch (secondByte)
-                {
-                case 0x80 ... 0xBF:
-                {
-                    result.concat((char)firstByte);
-                    result.concat((char)secondByte);
-                }
-                break;
-                default:
-                {
-                    result.concat("?");
-                    log_e("Invalid 16-bit utf8 sequence. Dropped 2 bytes.");
-                }
-                }
-            }
-            break;
-
-            case 0xC9:
-                result.concat("&Eacute;"); // É
-                break;
-
-            case 0xE1:
-                result.concat("&aacute;"); // á
-                break;
-
-            case 0xE4:
-                result.concat("&auml;"); // ä
-                break;
-
-            case 0xE7:
-                result.concat("&ccedil;"); // ç
-                break;
-
-            case 0xE8:
-                result.concat("&egrave;"); // è
-                break;
-
-            case 0xE9:
-                result.concat("&eacute;"); // é
-                break;
-
-            case 0xEA:
-                result.concat("&ecirc;"); // ê
-                break;
-
-            case 0xEB:
-                result.concat("&euml;"); // ë
-                break;
-
-            case 0xED:
-                result.concat("&iacute;"); // í
-                break;
-
-            // WIP
-            case 0xEF: // Byte Order Mark -> https://en.wikipedia.org/wiki/Byte_order_mark - see UTF-8 on that page - seen on 'SUBLIME pure jazz'
-            {
-                cnt++;
-                const uint8_t secondByte = plaintext[cnt];
-                if (0xBB != secondByte)
-                {
-                    result.concat("ï");
-                    result.concat((char)secondByte);
-                    break;
-                }
-                cnt++;
-                const uint8_t thirdByte = plaintext[cnt];
-                if (0xBF != thirdByte)
-                {
-                    result.concat("???");
-                    log_e("Invalid byte sequence. Dropped 3 bytes.");
-                    break;
-                }
-                /* if arrived here, we have the sequence 0xEF,0xBB,0xBF which is a BOM and codes for no output */
-                log_d("Byte Order Mark skipped");
-            }
-            break;
-
-            case 0xF3:
-                result.concat("&oacute; "); // ó
-                break;
-
-            case 0xF6:
-                result.concat("&ouml;"); // ö
-                break;
-
-            case 0xFC:
-                result.concat("&uuml;"); // ü
-                break;
-
-            default:
-                result.concat("?");
-                log_d("ERROR: Unhandled char 0x%x", plaintext[cnt]);
-            }
+            if (o + 1 >= out_size) break;
+            out[o++] = c;
+            i++;
+            continue;
         }
-        else
-            result.concat(plaintext[cnt]);
-        cnt++;
+
+        // --- UTF-8 detection ---
+
+        // 2-byte UTF-8
+        if ((c & 0xE0) == 0xC0)
+        {
+            if (i + 1 < in_len)
+            {
+                uint8_t c2 = (uint8_t)in[i + 1];
+                if ((c2 & 0xC0) == 0x80)
+                {
+                    if (o + 2 >= out_size) break;
+                    out[o++] = c;
+                    out[o++] = c2;
+                    i += 2;
+                    continue;
+                }
+            }
+            // invalid → fallthrough
+        }
+
+        // 3-byte UTF-8
+        if ((c & 0xF0) == 0xE0)
+        {
+            if (i + 2 < in_len)
+            {
+                uint8_t c2 = (uint8_t)in[i + 1];
+                uint8_t c3 = (uint8_t)in[i + 2];
+
+                // BOM check (EF BB BF)
+                if (c == 0xEF && c2 == 0xBB && c3 == 0xBF)
+                {
+                    i += 3;
+                    continue; // skip BOM
+                }
+
+                if ((c2 & 0xC0) == 0x80 &&
+                    (c3 & 0xC0) == 0x80)
+                {
+                    if (o + 3 >= out_size) break;
+                    out[o++] = c;
+                    out[o++] = c2;
+                    out[o++] = c3;
+                    i += 3;
+                    continue;
+                }
+            }
+            // invalid → fallthrough
+        }
+
+        // 4-byte UTF-8
+        if ((c & 0xF8) == 0xF0)
+        {
+            if (i + 3 < in_len)
+            {
+                uint8_t c2 = (uint8_t)in[i + 1];
+                uint8_t c3 = (uint8_t)in[i + 2];
+                uint8_t c4 = (uint8_t)in[i + 3];
+
+                if ((c2 & 0xC0) == 0x80 &&
+                    (c3 & 0xC0) == 0x80 &&
+                    (c4 & 0xC0) == 0x80)
+                {
+                    if (o + 4 >= out_size) break;
+                    out[o++] = c;
+                    out[o++] = c2;
+                    out[o++] = c3;
+                    out[o++] = c4;
+                    i += 4;
+                    continue;
+                }
+            }
+            // invalid → fallthrough
+        }
+
+        // --- fallback: treat as Latin-1 ---
+
+        if (o + 2 >= out_size) break;
+
+        out[o++] = 0xC0 | (c >> 6);
+        out[o++] = 0x80 | (c & 0x3F);
+        i++;
     }
-    log_d("Input str: %s", plaintext);
-    log_d("Returning html encoded str: %s", result.c_str());
-    return result;
+
+    // null terminate
+    if (o < out_size)
+        out[o] = '\0';
+    else
+        out[out_size - 1] = '\0';
+
+    return o;
 }
 
 #endif
