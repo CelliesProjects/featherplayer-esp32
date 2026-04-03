@@ -758,7 +758,6 @@ void serverTask(void *parameter)
             {
                 const auto META_MAX = 1024;
                 const auto META_UTF8_MAX = (META_MAX * 2 + 1);
-
                 static char *g_utf8buf = nullptr;
 
                 if (!g_utf8buf)
@@ -772,12 +771,8 @@ void serverTask(void *parameter)
                 }
 
                 size_t len = strnlen(msg.str, sizeof(msg.str));
-
                 normalize_to_utf8(msg.str, len, g_utf8buf, META_UTF8_MAX);
-
-                snprintf(streamTitle, sizeof(streamTitle),
-                         "streamtitle\n%s\n",
-                         g_utf8buf);
+                snprintf(streamTitle, sizeof(streamTitle), "streamtitle\n%s\n", g_utf8buf);
 
                 websocketHandler.sendAll(streamTitle);
                 break;
