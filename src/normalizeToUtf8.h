@@ -1,5 +1,5 @@
-#ifndef __PERCENT_ENCODE__
-#define __PERCENT_ENCODE__
+#ifndef _NORMALIZE_UTF8_
+#define _NORMALIZE_UTF8_
 
 size_t normalize_to_utf8(const char* in, size_t in_len,
                          char* out, size_t out_size)
