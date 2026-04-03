@@ -6,7 +6,7 @@
 #include "ScopedMutex.h"
 #include "playList.h"
 #include "icons.h"
-#include "percentEncode.h"
+#include "normalizeToUtf8.h"
 #include "WiFiCredentials.h" /* untracked file in folder include */
 #include "tftMessage_t.h"
 #include "playerMessage_t.h"
@@ -129,8 +129,6 @@ void setup()
     else
     {
         sendTftMessage(tftMessage::SYSTEM_MESSAGE, "Formatting, please wait...");
-
-        delay(2);
 
         log_i("Formatting FFat...");
         if (!FFat.format(true) || !FFat.begin(0, "", 2))
