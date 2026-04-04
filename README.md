@@ -8,12 +8,11 @@ combined with a
 
 ![output](https://github.com/user-attachments/assets/dbf91db2-5dc3-4b15-a5bc-88297a14d90f)
 
-A web-based esp32 music player for mp3/ogg/aac/aac+ webradio, local music files and <strike>files from a sdcard</strike>.  
+A web-based esp32 music player for mp3/ogg/aac/aac+/flac webradio and music files.  
 Sound output comes from a VS1053 mp3/aac/ogg/wav decoder board.
 
 - Supports http, https (insecure mode) and chunked streams.  
 - Plays files from local network.  
-- <strike>Plays local files from a mounted filesystem.&nbsp;</strike>Working on it.  
 - Search for web radio stations on [radio-browser](https://www.radio-browser.info/).  
 - Save found radio stations to your favorites.  
 
