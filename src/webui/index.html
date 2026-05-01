@@ -603,7 +603,7 @@
             const url = item.url_resolved ? item.url_resolved : item.url;
             var cnt = 0;
             while (cnt < index) {
-                if (arr[cnt++].url == url) 
+                if (arr[cnt++].url == url)
                     return;
             }
 
@@ -663,6 +663,15 @@
             const addicon = '<svg class="icon" id="addfavorite" xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24"><path d="M0 0h24v24H0z" fill="none"/><path d="M14 10H2v2h12v-2zm0-4H2v2h12V6zm4 8v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zM2 16h8v-2H2v2z"/></svg>';
             var ws = new ReconnectingWebSocket(ws_host, null, { debug: false, reconnectInterval: 3500 });
 
+            function sendWS(msg) {
+                if (ws && ws.readyState === WebSocket.OPEN)
+                    ws.send(msg);
+                else
+                    console.warn("WS not connected:", msg);
+            }
+
+            window.sendWS = sendWS;
+
             ws.onmessage = function (e) {
                 var command = e.data.split("\n");
                 switch (command[0]) {
@@ -675,7 +684,7 @@
                             $('.plitem').eq(currentItem).css("background-color", "cadetblue");
                         break;
 
-                    case "playlist":                    
+                    case "playlist":
                         $('.plitem').css("background-color", "");
                         currentItem = parseInt(command[1]);
                         console.log('currentItem: ' + currentItem);
@@ -705,10 +714,10 @@
                                     break;
                             }
                             $('#PLAYLIST').append('<p class="plitem">' + removebutton + typeicon + '<span class="text">' + command[i] + '</span></p>');
-                        }                        
+                        }
                         if (currentItem != -1)
                             $('.plitem').eq(currentItem).css("background-color", "cadetblue");
-                                                                        
+
                         break;
 
                     case "message":
@@ -819,34 +828,34 @@
             });
 
             $('body').on('click', '.filelink', function (e) {
-                ws.send("filetoplaylist\n" + libraryURL.substring(0, libraryURL.lastIndexOf('/')) + currentpath + '/' + $(this).text());
+                sendWS("filetoplaylist\n" + libraryURL.substring(0, libraryURL.lastIndexOf('/')) + currentpath + '/' + $(this).text());
                 e.stopPropagation();
             });
 
             $('body').on('click', '.filelink .starticon', function (e) {
-                ws.send("_filetoplaylist\n" + libraryURL.substring(0, libraryURL.lastIndexOf('/',)) + currentpath + '/' + $(this).parent().text());
+                sendWS("_filetoplaylist\n" + libraryURL.substring(0, libraryURL.lastIndexOf('/',)) + currentpath + '/' + $(this).parent().text());
                 e.stopPropagation();
             });
 
             $('body').on('click', '.streamlink .starticon', function (e) {
-                ws.send("_presetstation\n" + $(this).parent().index());
+                sendWS("_presetstation\n" + $(this).parent().index());
                 e.stopPropagation();
             });
 
             $('body').on('click', '.favoritelink', function (e) {
-                ws.send("favoritetoplaylist\n" + $(this).text());
+                sendWS("favoritetoplaylist\n" + $(this).text());
                 e.stopPropagation();
             });
 
             $('body').on('click', '.favoritelink .starticon', function (e) {
-                ws.send("_favoritetoplaylist\n" + $(this).parent().text());
+                sendWS("_favoritetoplaylist\n" + $(this).parent().text());
                 e.stopPropagation();
             });
 
             $('body').on('click', '.favoritelink .deletebutton', function (e) {
                 e.stopPropagation();
                 if (!confirm("Are you sure to delete this favorite?")) return;
-                ws.send("deletefavorite\n" + ($(this).parent().text()));
+                sendWS("deletefavorite\n" + ($(this).parent().text()));
             });
 
             $('body').on('click', '.addfolder, .folderlink .starticon', function (e) {
@@ -868,44 +877,44 @@
                             content += location + requestpath + '/' + $(this).text() + "\n";
                         });
                         document.body.removeChild(nList);
-                        ws.send(content);
+                        sendWS(content);
                     });
                 e.stopPropagation();
             });
 
             $('body').on('click', '.plitem', function () {
-                ws.send("playitem\n" + ($(this).index('.plitem')));
+                sendWS("playitem\n" + ($(this).index('.plitem')));
             });
 
             $('body').on('click', '.plitem .deletebutton', function (e) {
-                ws.send("deleteitem\n" + ($(this).index('.deletebutton')));
+                sendWS("deleteitem\n" + ($(this).index('.deletebutton')));
                 e.stopPropagation();
             });
 
             $('body').on('click', '#pausebutton', function () {
-                ws.send("pause\n");
+                sendWS("pause\n");
             });
 
             $('body').on('click', '#playbutton', function () {
-                ws.send("unpause\n");
+                sendWS("unpause\n");
             });
 
             $('body').on('click', '#previousbutton', function () {
                 if (currentItem > 0)
-                    ws.send("previous\n");
+                    sendWS("previous\n");
             });
 
             $('body').on('click', '#nextbutton', function () {
                 if (currentItem < $('.plitem').length - 1)
-                    ws.send("next\n");
+                    sendWS("next\n");
             });
 
             $('body').on('click', '#clearbutton', function () {
-                ws.send("clearlist\n");
+                sendWS("clearlist\n");
             });
 
             $('body').on('click', '.streamlink', function () {
-                ws.send("presetstation\n" + $(this).index());
+                sendWS("presetstation\n" + $(this).index());
             });
 
             $('#searchpattern').on('keydown', function (e) {
@@ -929,11 +938,11 @@
                 if (!filename) return;
 
                 // let the server receive a possibly invalid filename and respond to the error in the callback
-                ws.send("currenttofavorites\n" + filename);
+                sendWS("currenttofavorites\n" + filename);
             });
 
             $('body').on('change', '#volumeslider', function (e) {
-                ws.send("volume\n" + this.value);
+                sendWS("volume\n" + this.value);
             });
 
             $('#overlay').on('click', function () {
@@ -947,31 +956,31 @@
             $('#progressinput').on('click touchend', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
-                ws.send("jumptopos\n" + this.value)
+                sendWS("jumptopos\n" + this.value)
             });
 
             $('body').on('click', '.foundlink', function (e) {
                 e.stopPropagation();
-                ws.send("foundlink\n" + this.getAttribute('data-url') + '\n' + this.getAttribute('data-name'));
+                sendWS("foundlink\n" + this.getAttribute('data-url') + '\n' + this.getAttribute('data-name'));
                 $.get(baseurl + '/json/url/' + this.getAttribute('data-station-uuid'), function (data) { console.log(data); });
             });
 
             $('body').on('click', '.foundlink span.text', function (e) {
                 e.stopPropagation();
-                ws.send("foundlink\n" + this.parentElement.getAttribute('data-url') + '\n' + this.parentElement.getAttribute('data-name'));
+                sendWS("foundlink\n" + this.parentElement.getAttribute('data-url') + '\n' + this.parentElement.getAttribute('data-name'));
                 $.get(baseurl + '/json/url/' + this.parentElement.getAttribute('data-station-uuid'), function (data) { console.log(data); });
             });
 
             $('body').on('click', '.foundlink img.icon.starticon', function (e) {
                 e.stopPropagation();
-                ws.send("_foundlink\n" + this.parentElement.getAttribute('data-url') + '\n' + this.parentElement.getAttribute('data-name'));
+                sendWS("_foundlink\n" + this.parentElement.getAttribute('data-url') + '\n' + this.parentElement.getAttribute('data-name'));
                 $.get(baseurl + '/json/url/' + this.parentElement.getAttribute('data-station-uuid'), function (data) { console.log(data); });
             });
 
             $('body').on('click', '.foundlink img.icon.nosslicon', function (e) {
                 e.stopPropagation();
                 const nosslurl = 'http' + this.parentElement.getAttribute('data-url').substring(5);
-                ws.send("_foundlink\n" + nosslurl + '\n' + this.parentElement.getAttribute('data-name'));
+                sendWS("_foundlink\n" + nosslurl + '\n' + this.parentElement.getAttribute('data-name'));
                 $.get(baseurl + '/json/url/' + this.parentElement.getAttribute('data-station-uuid'), function (data) { console.log(data); });
             });
 
