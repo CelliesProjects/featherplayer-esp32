@@ -101,6 +101,7 @@ static void startItem(ESP32_VS1053_Stream &audio, playerMessage &msg)
     {
         if (!msg.offset)
         {
+            sendTftMessage(tftMessage::CLEAR_SCREEN);
             sendTftMessage(tftMessage::SHOW_STATION, playList.name(playList.currentItem()).c_str());
             sendTftMessage(tftMessage::SHOW_TITLE, " ");
             sendTftMessage(tftMessage::SHOW_LOADING);
